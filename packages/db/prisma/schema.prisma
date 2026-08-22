@@ -1,0 +1,275 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ProductType {
+  DIGITAL
+  PHYSICAL
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum CheckoutLayout {
+  CLASSIC
+  SIDE_SUMMARY
+  MINIMAL
+  SHOP
+  PIX_API
+}
+
+enum CheckoutSessionStatus {
+  OPEN
+  IDENTIFIED
+  PAYMENT_PENDING
+  PAID
+  EXPIRED
+  ABANDONED
+}
+
+enum OrderStatus {
+  PENDING
+  PIX_CREATED
+  PAID
+  EXPIRED
+  CANCELED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  CREATED
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  CANCELED
+  REFUNDED
+}
+
+enum CheckoutEventType {
+  CHECKOUT_ACCESSED
+  IDENTIFICATION_SUBMITTED
+  DELIVERY_SUBMITTED
+  PAYMENT_STARTED
+  PIX_CREATED
+  PIX_COPIED
+  PAYMENT_CONFIRMED
+  CHECKOUT_EXPIRED
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  memberships  Membership[]
+  auditLogs    AuditLog[]   @relation("AuditActor")
+}
+
+model Workspace {
+  id                 String              @id @default(cuid())
+  name               String
+  slug               String              @unique
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  memberships        Membership[]
+  products           Product[]
+  themes             CheckoutTheme[]
+  checkoutSessions   CheckoutSession[]
+  orders             Order[]
+  gatewayCredentials GatewayCredential[]
+  auditLogs          AuditLog[]
+}
+
+model Membership {
+  id          String         @id @default(cuid())
+  role        MembershipRole @default(MEMBER)
+  userId      String
+  workspaceId String
+  createdAt   DateTime       @default(now())
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+model CheckoutTheme {
+  id              String         @id @default(cuid())
+  workspaceId     String
+  name            String
+  storeName       String
+  layout          CheckoutLayout @default(CLASSIC)
+  logoUrl         String?
+  bannerUrl       String?
+  primaryColor    String         @default("#3B82F6")
+  buttonColor     String         @default("#10B981")
+  backgroundColor String         @default("#F5F5F5")
+  textColor       String         @default("#111111")
+  settings        Json
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  workspace       Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  products        Product[]
+
+  @@index([workspaceId])
+}
+
+model Product {
+  id              String        @id @default(cuid())
+  workspaceId     String
+  themeId         String?
+  name            String
+  slug            String
+  description     String?
+  imageUrl        String?
+  type            ProductType
+  status          ProductStatus @default(DRAFT)
+  priceInCents    Int
+  compareAtInCents Int?
+  currency        String        @default("BRL")
+  quantityEnabled Boolean       @default(false)
+  deliveryConfig  Json?
+  redirectUrl     String?
+  trackingConfig  Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  workspace       Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  theme           CheckoutTheme? @relation(fields: [themeId], references: [id], onDelete: SetNull)
+  checkoutSessions CheckoutSession[]
+  orders          Order[]
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId, status])
+}
+
+model CheckoutSession {
+  id          String                @id @default(cuid())
+  workspaceId String
+  productId   String
+  visitorId   String
+  status      CheckoutSessionStatus @default(OPEN)
+  customer    Json?
+  tracking    Json?
+  expiresAt   DateTime
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  workspace   Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  product     Product               @relation(fields: [productId], references: [id], onDelete: Restrict)
+  order       Order?
+  events      CheckoutEvent[]
+
+  @@index([workspaceId, createdAt])
+  @@index([productId, status])
+}
+
+model Order {
+  id                String       @id @default(cuid())
+  publicId          String       @unique
+  workspaceId       String
+  productId         String
+  checkoutSessionId String       @unique
+  status            OrderStatus  @default(PENDING)
+  customerEmail     String
+  customerName      String?
+  customerDocument  String?
+  quantity          Int          @default(1)
+  subtotalInCents   Int
+  totalInCents      Int
+  currency          String       @default("BRL")
+  paidAt            DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  workspace         Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  product           Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  checkoutSession   CheckoutSession @relation(fields: [checkoutSessionId], references: [id], onDelete: Restrict)
+  payments          Payment[]
+  events            CheckoutEvent[]
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, status])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  orderId       String
+  provider      String
+  externalId    String?
+  status        PaymentStatus @default(CREATED)
+  amountInCents Int
+  currency      String        @default("BRL")
+  pixCode       String?
+  expiresAt     DateTime?
+  paidAt        DateTime?
+  rawPayload    Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, externalId])
+  @@index([orderId, status])
+}
+
+model CheckoutEvent {
+  id                String            @id @default(cuid())
+  workspaceId       String
+  checkoutSessionId String
+  orderId           String?
+  type              CheckoutEventType
+  payload           Json?
+  occurredAt        DateTime          @default(now())
+  checkoutSession   CheckoutSession   @relation(fields: [checkoutSessionId], references: [id], onDelete: Cascade)
+  order             Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, occurredAt])
+  @@index([checkoutSessionId, occurredAt])
+  @@index([orderId, occurredAt])
+}
+
+model GatewayCredential {
+  id                   String    @id @default(cuid())
+  workspaceId          String
+  provider             String
+  label                String
+  encryptedCredentials String
+  active               Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, provider, label])
+  @@index([workspaceId, active])
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  actorId     String?
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor       User?     @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([entityType, entityId])
+}

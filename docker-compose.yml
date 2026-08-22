@@ -1,0 +1,37 @@
+name: checkoutv3
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: checkoutv3
+      POSTGRES_PASSWORD: checkout_dev
+      POSTGRES_USER: checkout
+    ports:
+      - '55432:5432'
+    volumes:
+      - checkoutv3_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U checkout -d checkoutv3']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - '56379:6379'
+    volumes:
+      - checkoutv3_redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  checkoutv3_postgres_data:
+  checkoutv3_redis_data:

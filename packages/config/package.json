@@ -1,0 +1,12 @@
+{
+  "name": "@checkout/config",
+  "version": "0.1.0",
+  "private": true,
+  "files": [
+    "typescript"
+  ],
+  "scripts": {
+    "lint": "prettier --check package.json typescript",
+    "typecheck": "node -e \"process.exit(0)\""
+  }
+}
