@@ -4,7 +4,7 @@ Fundação de uma plataforma multi-tenant de checkout e orquestração de pagame
 
 ## Estado atual
 
-As Sprints 0, 1 e 2 entregam:
+As Sprints 0, 1, 2 e 3 entregam:
 
 - monorepo com painel web, API e worker;
 - cadastro, login, logout e recuperação de senha;
@@ -16,6 +16,11 @@ As Sprints 0, 1 e 2 entregam:
 - CRUD de temas com cores, logo, banner, timer, selo e CPF opcional;
 - catálogo de produtos digitais com rascunho, edição, publicação e arquivamento;
 - primeiro checkout público responsivo por slug de workspace e produto;
+- fluxo público de identificação, resumo, quantidade e pagamento;
+- sessão transacional com valores congelados em centavos e expiração;
+- pedido e pagamento com PIX simulado, cópia de código e comprovante;
+- eventos append-only do funil e confirmação simulada de pagamento;
+- lista mínima de pedidos isolada por workspace no painel;
 - PostgreSQL com Prisma, Redis/BullMQ e pipeline de migrations;
 - lint, tipos, testes unitários, build, E2E e CI.
 
@@ -95,3 +100,4 @@ packages/
 Veja as decisões arquiteturais em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 O escopo e os aceites da entrega atual estão em [`docs/SPRINT_1.md`](docs/SPRINT_1.md).
 Veja também a entrega de catálogo e temas em [`docs/SPRINT_2.md`](docs/SPRINT_2.md).
+O checkout transacional e o ciclo simulado do pedido estão em [`docs/SPRINT_3.md`](docs/SPRINT_3.md).

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { CheckoutPreview } from '@/src/components/catalog/checkout-preview';
+import { PublicCheckoutFlow } from '@/src/components/checkout/public-checkout-flow';
 import { getPublicCheckout } from '@/src/lib/api';
 
 type PublicCheckoutPageProps = {
@@ -32,7 +32,7 @@ export default async function PublicCheckoutPage({ params }: PublicCheckoutPageP
 
   return (
     <main className="public-checkout-page">
-      <CheckoutPreview mode="public" product={checkout.product} theme={checkout.theme} />
+      <PublicCheckoutFlow checkout={checkout} />
     </main>
   );
 }

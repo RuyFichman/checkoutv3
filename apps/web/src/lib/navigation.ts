@@ -13,7 +13,7 @@ export const productModules = {
     eyebrow: 'OPERAÇÃO',
     description: 'Acompanhe cada pedido desde a geração do PIX até a aprovação.',
     emptyTitle: 'Nenhum pedido por enquanto',
-    emptyDescription: 'Quando o checkout estiver publicado, os pedidos aparecerão nesta lista.',
+    emptyDescription: 'Os pedidos aparecem assim que um comprador gera o PIX no checkout público.',
     action: 'Conhecer o fluxo',
     sprint: 3,
   },

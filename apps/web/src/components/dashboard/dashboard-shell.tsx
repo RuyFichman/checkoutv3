@@ -153,11 +153,11 @@ export function DashboardShell({ children, viewer }: DashboardShellProps) {
         <span>
           <Sparkles size={15} /> Jornada do MVP
         </span>
-        <strong>3 de 6 etapas</strong>
+        <strong>4 de 6 etapas</strong>
         <div>
           <i />
         </div>
-        <small>Agora: catálogo e temas</small>
+        <small>Agora: checkout e ciclo do pedido</small>
       </div>
     </aside>
   );

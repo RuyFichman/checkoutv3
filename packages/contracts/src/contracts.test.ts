@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import {
   authViewerSchema,
+  checkoutIdentificationInputSchema,
+  checkoutQuantityInputSchema,
+  checkoutReceiptInputSchema,
   checkoutThemeInputSchema,
   moneyInCentsSchema,
   productInputSchema,
   productSchema,
+  publicCheckoutSessionCreateInputSchema,
   publicSlugSchema,
   registerInputSchema,
 } from './index';
@@ -128,5 +132,50 @@ describe('core contracts', () => {
         },
       }).layout,
     ).toBe('CLASSIC');
+  });
+
+  it('validates the public checkout session and normalizes the CPF', () => {
+    expect(
+      publicCheckoutSessionCreateInputSchema.parse({
+        visitorId: 'b3d70a7e-347d-4fd4-98ea-f18ecb28f6e7',
+        tracking: {
+          source: 'newsletter',
+          medium: null,
+          campaign: null,
+          content: null,
+          term: null,
+          referrer: null,
+        },
+      }).visitorId,
+    ).toBe('b3d70a7e-347d-4fd4-98ea-f18ecb28f6e7');
+
+    expect(
+      checkoutIdentificationInputSchema.parse({
+        name: 'Comprador Teste',
+        email: 'COMPRADOR@EXAMPLE.COM',
+        document: '123.456.789-01',
+      }),
+    ).toMatchObject({ email: 'comprador@example.com', document: '12345678901' });
+    expect(checkoutQuantityInputSchema.safeParse({ quantity: 11 }).success).toBe(false);
+  });
+
+  it('accepts only bounded receipt data matching its declared type', () => {
+    const dataUrl = `data:image/png;base64,${Buffer.from('mock-receipt').toString('base64')}`;
+    expect(
+      checkoutReceiptInputSchema.parse({
+        dataUrl,
+        fileName: 'comprovante.png',
+        contentType: 'image/png',
+        size: 12,
+      }).fileName,
+    ).toBe('comprovante.png');
+    expect(
+      checkoutReceiptInputSchema.safeParse({
+        dataUrl,
+        fileName: 'comprovante.pdf',
+        contentType: 'application/pdf',
+        size: 12,
+      }).success,
+    ).toBe(false);
   });
 });

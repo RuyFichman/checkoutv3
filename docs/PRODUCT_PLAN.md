@@ -100,6 +100,8 @@ Cada sprint termina com demonstração navegável, testes do caminho crítico e 
 
 ### Sprint 3 — Checkout e ciclo do pedido
 
+**Status:** concluída em 22/08/2026.
+
 - Etapas de identificação, resumo e pagamento.
 - Sessão de checkout, quantidade e cálculo de totais.
 - Máquina de estados do pedido e do pagamento.

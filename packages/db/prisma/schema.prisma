@@ -68,6 +68,7 @@ enum CheckoutEventType {
   PAYMENT_STARTED
   PIX_CREATED
   PIX_COPIED
+  RECEIPT_UPLOADED
   PAYMENT_CONFIRMED
   CHECKOUT_EXPIRED
 }
@@ -202,6 +203,11 @@ model CheckoutSession {
   status      CheckoutSessionStatus @default(OPEN)
   customer    Json?
   tracking    Json?
+  quantity         Int @default(1)
+  unitPriceInCents Int
+  subtotalInCents  Int
+  totalInCents     Int
+  currency         String
   expiresAt   DateTime
   createdAt   DateTime              @default(now())
   updatedAt   DateTime              @updatedAt
@@ -210,6 +216,7 @@ model CheckoutSession {
   order       Order?
   events      CheckoutEvent[]
 
+  @@unique([productId, visitorId])
   @@index([workspaceId, createdAt])
   @@index([productId, status])
 }
@@ -252,6 +259,9 @@ model Payment {
   pixCode       String?
   expiresAt     DateTime?
   paidAt        DateTime?
+  receiptUrl        String?
+  receiptFileName   String?
+  receiptUploadedAt DateTime?
   rawPayload    Json?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt

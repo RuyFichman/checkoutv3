@@ -71,6 +71,16 @@ Temas armazenam identidade visual e um objeto validado de configurações do lay
 
 Na Sprint 2, imagens de até 1 MB são aceitas como data URLs validadas para manter o fluxo local reproduzível enquanto o provedor de storage permanece em aberto. Antes de produção, esses blobs deverão migrar para storage compatível com S3, mantendo no PostgreSQL apenas metadados e URLs.
 
+## Checkout e ciclo transacional
+
+A abertura do checkout cria uma `CheckoutSession` idempotente por produto e identificador do visitante. A sessão congela preço unitário, moeda, quantidade, subtotal e total; alterações posteriores no catálogo não modificam um pedido em andamento.
+
+O fluxo progride de `OPEN` para `IDENTIFIED`, `PAYMENT_PENDING` e `PAID`. Pedidos e pagamentos são criados junto ao PIX simulado, e cada transição relevante grava um `CheckoutEvent` na mesma transação de banco. A expiração é aplicada de forma preguiçosa em leituras e comandos públicos, levando sessão, pedido e pagamento pendentes a `EXPIRED` sem alterar estados terminais.
+
+O provider `MOCK` produz um código deliberadamente não pagável e expõe uma confirmação explícita somente para demonstração da Sprint 3. Nenhuma credencial ou transação financeira real participa desse caminho. A Sprint 4 substituirá essa ação pelo adapter e webhook do primeiro gateway real.
+
+Comprovantes aceitam PNG, JPEG, WebP ou PDF de até 2 MB e ficam temporariamente como data URL para manter o desenvolvimento local reproduzível. Antes da produção, devem migrar para storage privado compatível com S3; a visualização autenticada por URL temporária permanece para a Sprint 5.
+
 ## Evolução
 
 Serviços só serão extraídos quando métricas demonstrarem necessidade. Os candidatos naturais são ingestão de eventos, entrega de webhooks, processamento de mídia e adapters de gateways com alto volume.

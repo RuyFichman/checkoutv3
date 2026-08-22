@@ -126,12 +126,32 @@ test('creates a theme, publishes a product and opens an isolated public checkout
   await expect(publicPage.getByText(productName, { exact: true })).toBeVisible();
   await expect(publicPage.getByText(workspace)).toBeVisible();
   await publicPage.getByLabel('Nome completo').fill('Comprador Teste');
-  await publicPage.getByLabel('E-mail').fill('comprador@example.com');
-  await publicPage.getByRole('button', { name: 'Continuar para pagamento' }).click();
+  await publicPage.getByLabel('E-mail de entrega').fill('comprador@example.com');
+  await publicPage.getByRole('button', { name: 'Continuar para o resumo' }).click();
   await expect(
-    publicPage.getByText('Produto pronto para a etapa de pagamento da Sprint 3.'),
+    publicPage.getByRole('heading', { name: 'Confira antes de gerar o PIX' }),
   ).toBeVisible();
+  await publicPage.getByRole('button', { name: 'Gerar PIX' }).click();
+  await expect(publicPage.getByRole('heading', { name: 'PIX gerado com sucesso' })).toBeVisible();
+  await expect(publicPage.getByText(/Pedido C3-/)).toBeVisible();
+  await publicPage.getByRole('button', { name: 'Copiar código PIX' }).click();
+  await expect(publicPage.getByText('Código PIX copiado.')).toBeVisible();
+  await publicPage.locator('input[type="file"]').setInputFiles({
+    name: 'comprovante.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('comprovante-simulado'),
+  });
+  await expect(publicPage.getByText('Comprovante anexado ao pedido.')).toBeVisible();
+  await publicPage.getByRole('button', { name: 'Simular pagamento aprovado' }).click();
+  await expect(publicPage.getByRole('heading', { name: 'Pedido aprovado!' })).toBeVisible();
   await anonymousContext.close();
+
+  await desktopSidebar.getByRole('link', { name: 'Pedidos' }).click();
+  await expect(page.getByRole('heading', { name: 'Pedidos' })).toBeVisible();
+  await expect(page.getByText(productName, { exact: true })).toBeVisible();
+  await expect(page.getByText('Comprador Teste', { exact: true })).toBeVisible();
+  await expect(page.getByText('Pago', { exact: true })).toBeVisible();
+  await expect(page.getByText('Comprovante anexado', { exact: true })).toBeVisible();
 
   const isolatedContext = await browser.newContext();
   const isolatedPage = await isolatedContext.newPage();
@@ -144,5 +164,9 @@ test('creates a theme, publishes a product and opens an isolated public checkout
     fetch('/api/backend/products').then((response) => response.json()),
   );
   expect(isolatedCatalog.products).toEqual([]);
+  const isolatedOrders = await isolatedPage.evaluate(async () =>
+    fetch('/api/backend/orders').then((response) => response.json()),
+  );
+  expect(isolatedOrders.orders).toEqual([]);
   await isolatedContext.close();
 });

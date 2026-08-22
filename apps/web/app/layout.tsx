@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import './globals.css';
 import './sprint1.css';
 import './sprint2.css';
+import './sprint3.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.WEB_ORIGIN ?? 'http://localhost:3000'),

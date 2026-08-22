@@ -1,6 +1,15 @@
 const API_URL = process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:3333/v1';
-const ALLOWED_PREFIXES = ['auth/', 'account/', 'dashboard/', 'products/', 'themes/'];
-const ALLOWED_EXACT_PATHS = ['products', 'themes'];
+const ALLOWED_PREFIXES = [
+  'auth/',
+  'account/',
+  'dashboard/',
+  'products/',
+  'themes/',
+  'orders/',
+  'public/checkout/',
+  'public/checkout-sessions/',
+];
+const ALLOWED_EXACT_PATHS = ['products', 'themes', 'orders'];
 
 type RouteParameters = {
   params: Promise<{ path: string[] }>;

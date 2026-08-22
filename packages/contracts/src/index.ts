@@ -203,6 +203,60 @@ export const publicCheckoutSchema = z.object({
   theme: checkoutThemeSchema,
 });
 
+export const checkoutVisitorIdSchema = z.uuid();
+export const checkoutTrackingInputSchema = z
+  .object({
+    source: z.string().trim().max(120).nullable(),
+    medium: z.string().trim().max(120).nullable(),
+    campaign: z.string().trim().max(160).nullable(),
+    content: z.string().trim().max(160).nullable(),
+    term: z.string().trim().max(160).nullable(),
+    referrer: z.string().trim().max(500).nullable(),
+  })
+  .nullable();
+
+export const publicCheckoutSessionCreateInputSchema = z.object({
+  visitorId: checkoutVisitorIdSchema,
+  tracking: checkoutTrackingInputSchema,
+});
+
+export const checkoutIdentificationInputSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  email: emailInputSchema,
+  document: z
+    .string()
+    .transform((value) => value.replace(/\D/g, ''))
+    .pipe(z.string().length(11, 'Informe um CPF com 11 dígitos.'))
+    .nullable(),
+});
+
+export const checkoutQuantityInputSchema = z.object({
+  quantity: z.number().int().min(1).max(10),
+});
+
+export const checkoutReceiptInputSchema = z
+  .object({
+    dataUrl: z
+      .string()
+      .max(2_800_000, 'O comprovante deve ter no máximo 2 MB.')
+      .regex(
+        /^data:(?:image\/(?:png|jpeg|webp)|application\/pdf);base64,/,
+        'Use PNG, JPEG, WebP ou PDF.',
+      ),
+    fileName: z.string().trim().min(1).max(160),
+    contentType: z.enum(['image/png', 'image/jpeg', 'image/webp', 'application/pdf']),
+    size: z.number().int().positive().max(2_000_000),
+  })
+  .superRefine((input, context) => {
+    if (!input.dataUrl.startsWith(`data:${input.contentType};base64,`)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['contentType'],
+        message: 'O tipo do arquivo não corresponde ao comprovante enviado.',
+      });
+    }
+  });
+
 export const checkoutSessionStatusSchema = z.enum([
   'OPEN',
   'IDENTIFIED',
@@ -238,11 +292,75 @@ export const checkoutEventTypeSchema = z.enum([
   'PAYMENT_STARTED',
   'PIX_CREATED',
   'PIX_COPIED',
+  'RECEIPT_UPLOADED',
   'PAYMENT_CONFIRMED',
   'CHECKOUT_EXPIRED',
 ]);
 
+export const publicCheckoutPaymentSchema = z.object({
+  status: paymentStatusSchema,
+  provider: z.literal('MOCK'),
+  pixCode: z.string().nullable(),
+  expiresAt: z.iso.datetime().nullable(),
+  paidAt: z.iso.datetime().nullable(),
+  receiptFileName: z.string().nullable(),
+  receiptUploadedAt: z.iso.datetime().nullable(),
+});
+
+export const publicCheckoutOrderSchema = z.object({
+  publicId: z.string(),
+  status: orderStatusSchema,
+  paidAt: z.iso.datetime().nullable(),
+  payment: publicCheckoutPaymentSchema.nullable(),
+});
+
+export const publicCheckoutSessionSchema = z.object({
+  id: idSchema,
+  status: checkoutSessionStatusSchema,
+  quantity: z.number().int().min(1).max(10),
+  unitPriceInCents: moneyInCentsSchema,
+  subtotalInCents: moneyInCentsSchema,
+  totalInCents: moneyInCentsSchema,
+  currency: currencySchema,
+  expiresAt: z.iso.datetime(),
+  customer: z
+    .object({
+      name: z.string(),
+      email: z.email(),
+      document: z.string().nullable(),
+    })
+    .nullable(),
+  order: publicCheckoutOrderSchema.nullable(),
+});
+
+export const orderListItemSchema = z.object({
+  publicId: z.string(),
+  status: orderStatusSchema,
+  customerName: z.string().nullable(),
+  customerEmail: z.email(),
+  quantity: z.number().int().positive(),
+  totalInCents: moneyInCentsSchema,
+  currency: currencySchema,
+  createdAt: z.iso.datetime(),
+  paidAt: z.iso.datetime().nullable(),
+  product: z.object({
+    name: z.string(),
+    slug: z.string(),
+  }),
+  payment: z
+    .object({
+      status: paymentStatusSchema,
+      provider: z.string(),
+      expiresAt: z.iso.datetime().nullable(),
+      receiptUploadedAt: z.iso.datetime().nullable(),
+    })
+    .nullable(),
+});
+
 export type CheckoutEventType = z.infer<typeof checkoutEventTypeSchema>;
+export type CheckoutIdentificationInput = z.infer<typeof checkoutIdentificationInputSchema>;
+export type CheckoutQuantityInput = z.infer<typeof checkoutQuantityInputSchema>;
+export type CheckoutReceiptInput = z.infer<typeof checkoutReceiptInputSchema>;
 export type CheckoutSessionStatus = z.infer<typeof checkoutSessionStatusSchema>;
 export type CheckoutTheme = z.infer<typeof checkoutThemeSchema>;
 export type CheckoutThemeInput = z.infer<typeof checkoutThemeInputSchema>;
@@ -251,10 +369,15 @@ export type CatalogTheme = z.infer<typeof catalogThemeSchema>;
 export type Currency = z.infer<typeof currencySchema>;
 export type DeliveryConfig = z.infer<typeof deliveryConfigSchema>;
 export type OrderStatus = z.infer<typeof orderStatusSchema>;
+export type OrderListItem = z.infer<typeof orderListItemSchema>;
 export type PaymentStatus = z.infer<typeof paymentStatusSchema>;
 export type Product = z.infer<typeof productSchema>;
 export type ProductInput = z.infer<typeof productInputSchema>;
 export type PublicCheckout = z.infer<typeof publicCheckoutSchema>;
+export type PublicCheckoutSession = z.infer<typeof publicCheckoutSessionSchema>;
+export type PublicCheckoutSessionCreateInput = z.infer<
+  typeof publicCheckoutSessionCreateInputSchema
+>;
 export type ThemeSettings = z.infer<typeof themeSettingsSchema>;
 export type User = z.infer<typeof userSchema>;
 export type Workspace = z.infer<typeof workspaceSchema>;
