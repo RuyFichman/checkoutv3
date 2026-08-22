@@ -13,7 +13,7 @@ Antes de alterar comportamento ou arquitetura, leia:
 - `docs/SPRINT_2.md` para catálogo, temas e checkout público;
 - o `AGENTS.md` mais próximo do arquivo alterado, quando existir.
 
-As Sprints 0, 1, 2 e 3 estão concluídas. A Sprint 2 foi publicada em `origin/main` no commit `9cca9e5`; a Sprint 3 está concluída localmente e ainda não foi publicada. O próximo escopo planejado é a Sprint 4: primeiro gateway real. Não antecipe módulos de sprints futuras sem solicitação explícita.
+As Sprints 0, 1, 2 e 3 estão concluídas. A Sprint 2 foi publicada em `origin/main` no commit `9cca9e5`, e a Sprint 3 foi publicada no commit `4dc6f93`. O próximo escopo planejado é a Sprint 4: primeiro gateway real. Não antecipe módulos de sprints futuras sem solicitação explícita.
 
 ## Stack vigente
 
