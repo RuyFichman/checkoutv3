@@ -1,6 +1,6 @@
 # Memória do projeto — CheckoutV3
 
-Última atualização: 22/08/2026, após a conclusão técnica da Sprint 1.
+Última atualização: 22/08/2026, após a conclusão técnica da Sprint 2.
 
 ## Produto
 
@@ -23,26 +23,33 @@ O primeiro marco útil continua sendo: criar conta, configurar tema, cadastrar p
 - Fundação do monorepo, contratos, banco, worker, design tokens, CI, healthchecks e testes.
 - Migration inicial criada e aplicada.
 
-### Sprint 1 — implementada e validada localmente
+### Sprint 1 — concluída e enviada
 
-- Cadastro transacional cria usuário, workspace, associação `OWNER`, sessão e auditoria.
-- Login, logout, sessão persistida e recuperação/redefinição de senha estão funcionais.
-- Perfil do vendedor e workspace podem ser atualizados; mudanças administrativas respeitam papéis.
-- Dashboard autenticado possui métricas isoladas por tenant e modo demonstração.
-- Sidebar responsiva contém as rotas dos módulos previstos; módulos futuros exibem placeholders protegidos.
-- Estados de loading, vazio, erro e feedback foram implementados.
-- O BFF web encaminha somente rotas allowlisted para a API.
-- Migration `20260822072605_sprint_1_identity` aplicada; o banco possui duas migrations e está atualizado.
-- Social preview próprio salvo em `apps/web/public/og-checkoutv3.png` e conectado aos metadados.
+- Cadastro transacional, autenticação, recuperação de senha e sessão segura.
+- Perfil, workspace, papéis, auditoria, dashboard isolado por tenant e BFF allowlisted.
+- Migration `20260822072605_sprint_1_identity` aplicada.
+- Commit `cd73777` enviado para `origin/main`.
 
-As mudanças da Sprint 1 estão no working tree e ainda não foram commitadas ou enviadas após essa entrega.
+### Sprint 2 — concluída
+
+- CRUD completo de temas e produtos digitais, com rascunho, publicação, arquivamento, restauração e exclusão protegida.
+- Assistente de produto em três etapas, upload local de imagem e preview do checkout.
+- Editor visual de tema com logo, banner, cores, textos, timer, CPF e selo de segurança; previews desktop e mobile.
+- Checkout público em `/c/[workspaceSlug]/[productSlug]`, disponível somente para produtos ativos e com metadados próprios.
+- API pública e autenticada com escopo de workspace derivado exclusivamente da sessão.
+- Migration `20260822084528_sprint_2_catalog` aplicada; o banco possui três migrations e está atualizado.
+- Auditoria cobre criação, edição, publicação, arquivamento e exclusão do catálogo.
+- A implementação integral da Sprint 2 faz parte do histórico da branch `main`.
 
 ## Rotas disponíveis
 
 - `/cadastro`, `/entrar`, `/recuperar-senha` e `/redefinir-senha`.
 - `/app` para visão geral autenticada.
+- `/app/produtos` para catálogo e publicação.
+- `/app/temas` para identidade e preview do checkout.
 - `/app/configuracoes` para perfil, workspace e auditoria.
 - `/app/[section]` para as cascas protegidas dos módulos futuros.
+- `/c/[workspaceSlug]/[productSlug]` para o checkout público.
 - `/api/backend/[...path]` como BFF restrito.
 - `/api/health` no web e `/v1/health` na API.
 
@@ -56,26 +63,29 @@ As mudanças da Sprint 1 estão no working tree e ainda não foram commitadas ou
 - Dinheiro é inteiro em centavos.
 - O monólito modular será mantido até métricas justificarem extração de serviços.
 - Nenhum dado sensível de cartão será capturado pela plataforma.
+- Slugs de produto são únicos dentro do workspace; a URL pública combina os slugs do workspace e do produto.
+- Na Sprint 2, logo, banner e imagem usam data URL de PNG, JPEG ou WebP com arquivo de até 1 MB. Antes da produção, migrar a mídia para storage S3-compatible com URL assinada.
 
-## Baseline de qualidade da Sprint 1
+## Baseline de qualidade da Sprint 2
 
 - `pnpm format:check`: aprovado.
-- `pnpm check`: aprovado, incluindo lint, tipos, 11 testes unitários e 7 builds.
-- `pnpm test:e2e`: 2 testes aprovados — isolamento/navegação e recuperação de senha.
-- `prisma migrate status`: banco atualizado.
-- `git diff --check`: aprovado.
+- `pnpm check`: aprovado, incluindo lint, tipos, 13 testes unitários e 7 builds.
+- `pnpm test:e2e`: 3 testes aprovados — isolamento/navegação, recuperação de senha e criação/publicação/checkout público isolado.
+- `prisma migrate status`: 3 migrations aplicadas; banco atualizado.
+- Build do Next confirma a rota pública dinâmica.
 
 ## Próxima sprint
 
-Sprint 2 — temas e catálogo de produtos:
+Sprint 3 — checkout transacional e PIX:
 
-1. CRUD e arquivamento de produtos digitais.
-2. Assistente de criação com validação e rascunho.
-3. CRUD de temas e upload de logo/banner.
-4. Preview responsivo e primeiro checkout público configurável.
-5. Slug público e vínculo do tema ao produto.
+1. Contrato de gateway e primeiro adaptador de pagamento.
+2. Configuração segura das credenciais do vendedor.
+3. Criação idempotente de sessão de checkout e pedido.
+4. Geração de PIX, QR Code, expiração e consulta de status.
+5. Webhook assinado, processamento assíncrono e atualização do pedido.
+6. Estados reais de sucesso, expiração e falha no checkout público.
 
-O aceite será: o vendedor cria um tema e um produto e abre uma URL pública de checkout fiel à configuração.
+O aceite será: um comprador inicia um checkout publicado, gera um PIX em sandbox, o webhook confirma o pagamento uma única vez e o vendedor visualiza o pedido pago.
 
 ## Decisões ainda abertas
 

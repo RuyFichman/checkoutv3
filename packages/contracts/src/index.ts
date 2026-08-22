@@ -67,6 +67,46 @@ export const authViewerSchema = z.object({
 
 export const productStatusSchema = z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']);
 export const productTypeSchema = z.enum(['DIGITAL', 'PHYSICAL']);
+export const checkoutLayoutSchema = z.enum([
+  'CLASSIC',
+  'SIDE_SUMMARY',
+  'MINIMAL',
+  'SHOP',
+  'PIX_API',
+]);
+export const hexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+export const publicSlugSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(2)
+  .max(120)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Use apenas letras minúsculas, números e hífens.');
+export const publicAssetSourceSchema = z
+  .union([
+    z.url(),
+    z
+      .string()
+      .max(1_500_000, 'A imagem deve ter no máximo 1 MB.')
+      .regex(/^data:image\/(?:png|jpeg|webp);base64,/, 'Use PNG, JPEG ou WebP.'),
+  ])
+  .nullable();
+
+export const deliveryConfigSchema = z.object({
+  emailSubject: z.string().trim().min(2).max(160),
+  emailMessage: z.string().trim().min(2).max(2_000),
+});
+
+export const themeSettingsSchema = z.object({
+  gradientEnabled: z.boolean(),
+  secondaryColor: hexColorSchema,
+  showTimer: z.boolean(),
+  timerMinutes: z.number().int().min(5).max(60),
+  showSecurityBadge: z.boolean(),
+  requireCpf: z.boolean(),
+  headline: z.string().trim().min(2).max(100),
+  supportText: z.string().trim().min(2).max(180),
+});
 
 export const productSchema = z.object({
   id: idSchema,
@@ -75,21 +115,92 @@ export const productSchema = z.object({
   name: z.string().trim().min(2).max(160),
   slug: z.string().trim().min(2).max(120),
   description: z.string().max(2_000).nullable(),
+  imageUrl: publicAssetSourceSchema,
   type: productTypeSchema,
   status: productStatusSchema,
   priceInCents: moneyInCentsSchema,
+  compareAtInCents: moneyInCentsSchema.nullable(),
   currency: currencySchema,
+  quantityEnabled: z.boolean(),
+  deliveryConfig: deliveryConfigSchema.nullable(),
+  redirectUrl: z.url().nullable(),
+  publishedAt: z.iso.datetime().nullable(),
+  archivedAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 });
 
 export const checkoutThemeSchema = z.object({
   id: idSchema,
   workspaceId: idSchema,
   name: z.string().trim().min(2).max(120),
-  layout: z.enum(['CLASSIC', 'SIDE_SUMMARY', 'MINIMAL', 'SHOP', 'PIX_API']),
-  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  buttonColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  backgroundColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  textColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  storeName: z.string().trim().min(2).max(120),
+  layout: checkoutLayoutSchema,
+  logoUrl: publicAssetSourceSchema,
+  bannerUrl: publicAssetSourceSchema,
+  primaryColor: hexColorSchema,
+  buttonColor: hexColorSchema,
+  backgroundColor: hexColorSchema,
+  textColor: hexColorSchema,
+  settings: themeSettingsSchema,
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+});
+
+export const catalogProductSchema = productSchema.extend({
+  theme: z
+    .object({
+      id: idSchema,
+      name: z.string(),
+    })
+    .nullable(),
+});
+
+export const catalogThemeSchema = checkoutThemeSchema.extend({
+  productCount: z.number().int().nonnegative(),
+});
+
+export const productInputSchema = z
+  .object({
+    name: z.string().trim().min(2).max(160),
+    slug: publicSlugSchema,
+    description: z.string().trim().max(2_000).nullable(),
+    imageUrl: publicAssetSourceSchema,
+    type: z.literal('DIGITAL'),
+    priceInCents: moneyInCentsSchema,
+    compareAtInCents: moneyInCentsSchema.nullable(),
+    quantityEnabled: z.boolean(),
+    deliveryConfig: deliveryConfigSchema,
+    redirectUrl: z.url().nullable(),
+    themeId: idSchema.nullable(),
+  })
+  .superRefine((input, context) => {
+    if (input.compareAtInCents !== null && input.compareAtInCents <= input.priceInCents) {
+      context.addIssue({
+        code: 'custom',
+        path: ['compareAtInCents'],
+        message: 'O preço anterior deve ser maior que o preço de venda.',
+      });
+    }
+  });
+
+export const checkoutThemeInputSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  storeName: z.string().trim().min(2).max(120),
+  layout: z.literal('CLASSIC'),
+  logoUrl: publicAssetSourceSchema,
+  bannerUrl: publicAssetSourceSchema,
+  primaryColor: hexColorSchema,
+  buttonColor: hexColorSchema,
+  backgroundColor: hexColorSchema,
+  textColor: hexColorSchema,
+  settings: themeSettingsSchema,
+});
+
+export const publicCheckoutSchema = z.object({
+  workspace: workspaceSchema,
+  product: productSchema,
+  theme: checkoutThemeSchema,
 });
 
 export const checkoutSessionStatusSchema = z.enum([
@@ -134,10 +245,17 @@ export const checkoutEventTypeSchema = z.enum([
 export type CheckoutEventType = z.infer<typeof checkoutEventTypeSchema>;
 export type CheckoutSessionStatus = z.infer<typeof checkoutSessionStatusSchema>;
 export type CheckoutTheme = z.infer<typeof checkoutThemeSchema>;
+export type CheckoutThemeInput = z.infer<typeof checkoutThemeInputSchema>;
+export type CatalogProduct = z.infer<typeof catalogProductSchema>;
+export type CatalogTheme = z.infer<typeof catalogThemeSchema>;
 export type Currency = z.infer<typeof currencySchema>;
+export type DeliveryConfig = z.infer<typeof deliveryConfigSchema>;
 export type OrderStatus = z.infer<typeof orderStatusSchema>;
 export type PaymentStatus = z.infer<typeof paymentStatusSchema>;
 export type Product = z.infer<typeof productSchema>;
+export type ProductInput = z.infer<typeof productInputSchema>;
+export type PublicCheckout = z.infer<typeof publicCheckoutSchema>;
+export type ThemeSettings = z.infer<typeof themeSettingsSchema>;
 export type User = z.infer<typeof userSchema>;
 export type Workspace = z.infer<typeof workspaceSchema>;
 export type AuthViewer = z.infer<typeof authViewerSchema>;

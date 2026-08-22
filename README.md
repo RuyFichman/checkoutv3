@@ -4,7 +4,7 @@ Fundação de uma plataforma multi-tenant de checkout e orquestração de pagame
 
 ## Estado atual
 
-As Sprints 0 e 1 entregam:
+As Sprints 0, 1 e 2 entregam:
 
 - monorepo com painel web, API e worker;
 - cadastro, login, logout e recuperação de senha;
@@ -13,6 +13,9 @@ As Sprints 0 e 1 entregam:
 - dashboard responsivo, navegação completa e estados de loading, vazio e erro;
 - métricas isoladas por workspace e modo de demonstração;
 - configurações de perfil/workspace e trilha de auditoria;
+- CRUD de temas com cores, logo, banner, timer, selo e CPF opcional;
+- catálogo de produtos digitais com rascunho, edição, publicação e arquivamento;
+- primeiro checkout público responsivo por slug de workspace e produto;
 - PostgreSQL com Prisma, Redis/BullMQ e pipeline de migrations;
 - lint, tipos, testes unitários, build, E2E e CI.
 
@@ -40,6 +43,7 @@ Serviços locais:
 - cadastro: `http://localhost:3000/cadastro`
 - login: `http://localhost:3000/entrar`
 - painel autenticado: `http://localhost:3000/app`
+- checkout público: `http://localhost:3000/c/:workspaceSlug/:productSlug`
 - healthcheck web: `http://localhost:3000/api/health`
 - healthcheck API: `http://localhost:3333/v1/health`
 - PostgreSQL: `localhost:55432`
@@ -90,3 +94,4 @@ packages/
 
 Veja as decisões arquiteturais em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 O escopo e os aceites da entrega atual estão em [`docs/SPRINT_1.md`](docs/SPRINT_1.md).
+Veja também a entrega de catálogo e temas em [`docs/SPRINT_2.md`](docs/SPRINT_2.md).

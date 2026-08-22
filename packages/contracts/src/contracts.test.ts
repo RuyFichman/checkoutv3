@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { authViewerSchema, moneyInCentsSchema, productSchema, registerInputSchema } from './index';
+import {
+  authViewerSchema,
+  checkoutThemeInputSchema,
+  moneyInCentsSchema,
+  productInputSchema,
+  productSchema,
+  publicSlugSchema,
+  registerInputSchema,
+} from './index';
 
 describe('core contracts', () => {
   it('accepts integer monetary values in cents', () => {
@@ -20,10 +28,19 @@ describe('core contracts', () => {
         name: 'Curso de performance',
         slug: 'curso-de-performance',
         description: null,
+        imageUrl: null,
         type: 'DIGITAL',
         status: 'DRAFT',
         priceInCents: 19_900,
+        compareAtInCents: null,
         currency: 'BRL',
+        quantityEnabled: false,
+        deliveryConfig: null,
+        redirectUrl: null,
+        publishedAt: null,
+        archivedAt: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }),
     ).toMatchObject({ status: 'DRAFT', priceInCents: 19_900 });
   });
@@ -66,5 +83,50 @@ describe('core contracts', () => {
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it('normalizes public slugs and validates product pricing', () => {
+    expect(publicSlugSchema.parse('  Curso-Completo  ')).toBe('curso-completo');
+    expect(
+      productInputSchema.safeParse({
+        name: 'Curso completo',
+        slug: 'curso-completo',
+        description: null,
+        imageUrl: null,
+        type: 'DIGITAL',
+        priceInCents: 9_900,
+        compareAtInCents: 8_900,
+        quantityEnabled: false,
+        deliveryConfig: { emailSubject: 'Seu acesso', emailMessage: 'Acesse seu conteúdo.' },
+        redirectUrl: null,
+        themeId: null,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('accepts the first configurable checkout theme', () => {
+    expect(
+      checkoutThemeInputSchema.parse({
+        name: 'Tema principal',
+        storeName: 'Aurora Digital',
+        layout: 'CLASSIC',
+        logoUrl: null,
+        bannerUrl: null,
+        primaryColor: '#7C3AED',
+        buttonColor: '#16A34A',
+        backgroundColor: '#F5F3FF',
+        textColor: '#17121F',
+        settings: {
+          gradientEnabled: true,
+          secondaryColor: '#4C1D95',
+          showTimer: true,
+          timerMinutes: 15,
+          showSecurityBadge: true,
+          requireCpf: false,
+          headline: 'Finalize seu pedido',
+          supportText: 'Ambiente seguro para concluir sua compra.',
+        },
+      }).layout,
+    ).toBe('CLASSIC');
   });
 });

@@ -63,6 +63,14 @@ A API é a autoridade da sessão. O painel encaminha apenas o cookie para a API 
 
 Consultas operacionais são construídas com o escopo do tenant no servidor. Papéis `OWNER`, `ADMIN` e `MEMBER` controlam operações administrativas, e mudanças relevantes produzem registros append-only em `AuditLog`.
 
+## Catálogo e publicação
+
+Produtos começam como `DRAFT`, podem ser editados sem exposição pública e só passam a `ACTIVE` quando possuem preço positivo e um tema do mesmo workspace. O arquivamento remove o checkout da consulta pública sem apagar o histórico; produtos com sessões ou pedidos não podem ser excluídos.
+
+Temas armazenam identidade visual e um objeto validado de configurações do layout clássico. A URL pública usa `/c/:workspaceSlug/:productSlug`, consulta somente produtos ativos e não aceita `workspaceId` enviado pelo cliente. Slugs são únicos dentro de cada workspace.
+
+Na Sprint 2, imagens de até 1 MB são aceitas como data URLs validadas para manter o fluxo local reproduzível enquanto o provedor de storage permanece em aberto. Antes de produção, esses blobs deverão migrar para storage compatível com S3, mantendo no PostgreSQL apenas metadados e URLs.
+
 ## Evolução
 
 Serviços só serão extraídos quando métricas demonstrarem necessidade. Os candidatos naturais são ingestão de eventos, entrega de webhooks, processamento de mídia e adapters de gateways com alto volume.

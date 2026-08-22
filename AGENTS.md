@@ -10,9 +10,10 @@ Antes de alterar comportamento ou arquitetura, leia:
 - `docs/ARCHITECTURE.md` para limites e decisões técnicas;
 - `docs/PRODUCT_PLAN.md` para sequência das sprints;
 - `docs/SPRINT_1.md` para os fluxos já entregues;
+- `docs/SPRINT_2.md` para catálogo, temas e checkout público;
 - o `AGENTS.md` mais próximo do arquivo alterado, quando existir.
 
-As Sprints 0 e 1 estão concluídas. O próximo escopo planejado é a Sprint 2: temas e catálogo de produtos. Não antecipe módulos de sprints futuras sem solicitação explícita.
+As Sprints 0, 1 e 2 estão concluídas. O próximo escopo planejado é a Sprint 3: checkout e ciclo do pedido. Não antecipe módulos de sprints futuras sem solicitação explícita.
 
 ## Stack vigente
 
@@ -89,3 +90,4 @@ Não marque uma sprint ou tarefa como concluída enquanto lint, tipos, testes e 
 - A recuperação de senha mostra o link somente em desenvolvimento; produção deverá entregá-lo pelo provedor de e-mail.
 - Nenhum gateway real está conectado e nenhuma transação financeira real é processada.
 - O social preview oficial atual é `apps/web/public/og-checkoutv3.png`.
+- A Sprint 2 aceita PNG, JPEG ou WebP de até 1 MB como data URL persistida; migre os blobs para storage S3 compatível antes de produção.

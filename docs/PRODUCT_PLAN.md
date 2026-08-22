@@ -88,6 +88,8 @@ Cada sprint termina com demonstração navegável, testes do caminho crítico e 
 
 ### Sprint 2 — Temas e catálogo de produtos
 
+**Status:** concluída em 22/08/2026.
+
 - CRUD e arquivamento de produtos digitais.
 - Assistente de criação com validação e salvamento de rascunho.
 - CRUD de temas, upload de logo/banner e pré-visualização responsiva.

@@ -79,3 +79,70 @@ test('recovers the password with a single-use development link', async ({ page }
   await page.getByRole('button', { name: 'Entrar na plataforma' }).click();
   await expect(page).toHaveURL(/\/app$/);
 });
+
+test('creates a theme, publishes a product and opens an isolated public checkout', async ({
+  browser,
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const workspace = `Estúdio Catálogo ${suffix.slice(-5)}`;
+  const themeName = `Tema Violeta ${suffix.slice(-5)}`;
+  const productName = `Curso Catálogo ${suffix.slice(-5)}`;
+
+  await register(page, {
+    email: uniqueEmail('catalog-owner'),
+    name: 'Clara Catálogo',
+    workspace,
+  });
+
+  const desktopSidebar = page.locator('.desktop-sidebar');
+  await desktopSidebar.getByRole('link', { name: 'Temas' }).click();
+  await page.locator('.page-heading').getByRole('button', { name: 'Criar tema' }).click();
+  await page.getByLabel('Nome interno do tema').fill(themeName);
+  await page.getByLabel('Nome exibido no checkout').fill(workspace);
+  await page.getByRole('button', { name: 'Salvar tema' }).click();
+  await expect(page.getByText('Tema salvo e pronto para vincular a produtos.')).toBeVisible();
+  await page.getByRole('button', { name: 'Fechar', exact: true }).click();
+
+  await desktopSidebar.getByRole('link', { name: 'Produtos' }).click();
+  await page.locator('.page-heading').getByRole('button', { name: 'Criar produto' }).click();
+  await page.getByLabel('Nome do produto').fill(productName);
+  await page.getByRole('button', { name: /Continuar/ }).click();
+  await page.getByLabel('Preço de venda').fill('129.90');
+  await page.getByRole('button', { name: /Continuar/ }).click();
+  await page.getByRole('button', { name: new RegExp(themeName) }).click();
+  await page.getByRole('button', { name: 'Publicar checkout' }).click();
+
+  const checkoutLink = page.getByRole('link', { name: 'Abrir checkout' });
+  await expect(checkoutLink).toBeVisible();
+  const checkoutPath = await checkoutLink.getAttribute('href');
+  expect(checkoutPath).toMatch(/^\/c\//);
+
+  const anonymousContext = await browser.newContext();
+  const publicPage = await anonymousContext.newPage();
+  await publicPage.goto(checkoutPath!);
+  await expect(publicPage.getByRole('heading', { name: 'Finalize seu pedido' })).toBeVisible();
+  await expect(publicPage.getByText(productName, { exact: true })).toBeVisible();
+  await expect(publicPage.getByText(workspace)).toBeVisible();
+  await publicPage.getByLabel('Nome completo').fill('Comprador Teste');
+  await publicPage.getByLabel('E-mail').fill('comprador@example.com');
+  await publicPage.getByRole('button', { name: 'Continuar para pagamento' }).click();
+  await expect(
+    publicPage.getByText('Produto pronto para a etapa de pagamento da Sprint 3.'),
+  ).toBeVisible();
+  await anonymousContext.close();
+
+  const isolatedContext = await browser.newContext();
+  const isolatedPage = await isolatedContext.newPage();
+  await register(isolatedPage, {
+    email: uniqueEmail('catalog-isolated'),
+    name: 'Outro Vendedor',
+    workspace: `Outro Workspace ${suffix.slice(-5)}`,
+  });
+  const isolatedCatalog = await isolatedPage.evaluate(async () =>
+    fetch('/api/backend/products').then((response) => response.json()),
+  );
+  expect(isolatedCatalog.products).toEqual([]);
+  await isolatedContext.close();
+});

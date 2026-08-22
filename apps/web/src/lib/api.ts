@@ -1,4 +1,4 @@
-import type { AuthViewer } from '@checkout/contracts';
+import type { AuthViewer, PublicCheckout } from '@checkout/contracts';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -63,3 +63,19 @@ export async function authenticatedGet<T>(path: string): Promise<T> {
 
   return (await response.json()) as T;
 }
+
+export const getPublicCheckout = cache(
+  async (workspaceSlug: string, productSlug: string): Promise<PublicCheckout | null> => {
+    try {
+      const response = await fetch(`${API_URL}/public/checkout/${workspaceSlug}/${productSlug}`, {
+        headers: { accept: 'application/json' },
+        cache: 'no-store',
+      });
+
+      if (!response.ok) return null;
+      return (await response.json()) as PublicCheckout;
+    } catch {
+      return null;
+    }
+  },
+);

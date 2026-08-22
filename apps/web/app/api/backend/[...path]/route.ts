@@ -1,12 +1,15 @@
 const API_URL = process.env.API_INTERNAL_URL ?? 'http://127.0.0.1:3333/v1';
-const ALLOWED_PREFIXES = ['auth/', 'account/', 'dashboard/'];
+const ALLOWED_PREFIXES = ['auth/', 'account/', 'dashboard/', 'products/', 'themes/'];
+const ALLOWED_EXACT_PATHS = ['products', 'themes'];
 
 type RouteParameters = {
   params: Promise<{ path: string[] }>;
 };
 
 function isAllowed(path: string) {
-  return ALLOWED_PREFIXES.some((prefix) => path.startsWith(prefix));
+  return (
+    ALLOWED_EXACT_PATHS.includes(path) || ALLOWED_PREFIXES.some((prefix) => path.startsWith(prefix))
+  );
 }
 
 async function proxy(request: Request, context: RouteParameters) {
@@ -70,3 +73,4 @@ async function proxy(request: Request, context: RouteParameters) {
 export const GET = proxy;
 export const POST = proxy;
 export const PATCH = proxy;
+export const DELETE = proxy;
