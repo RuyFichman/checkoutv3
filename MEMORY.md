@@ -1,6 +1,6 @@
 # Memória do projeto — CheckoutV3
 
-Última atualização: 22/08/2026, após a conclusão técnica da Sprint 2.
+Última atualização: 22/08/2026, após o commit e o push da Sprint 2.
 
 ## Produto
 
@@ -39,7 +39,7 @@ O primeiro marco útil continua sendo: criar conta, configurar tema, cadastrar p
 - API pública e autenticada com escopo de workspace derivado exclusivamente da sessão.
 - Migration `20260822084528_sprint_2_catalog` aplicada; o banco possui três migrations e está atualizado.
 - Auditoria cobre criação, edição, publicação, arquivamento e exclusão do catálogo.
-- A implementação integral da Sprint 2 faz parte do histórico da branch `main`.
+- A implementação integral da Sprint 2 foi publicada em `origin/main` no commit `9cca9e5` (`feat: deliver sprint 2 catalog and public checkout`).
 
 ## Rotas disponíveis
 

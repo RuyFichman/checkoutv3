@@ -13,7 +13,7 @@ Antes de alterar comportamento ou arquitetura, leia:
 - `docs/SPRINT_2.md` para catálogo, temas e checkout público;
 - o `AGENTS.md` mais próximo do arquivo alterado, quando existir.
 
-As Sprints 0, 1 e 2 estão concluídas. O próximo escopo planejado é a Sprint 3: checkout e ciclo do pedido. Não antecipe módulos de sprints futuras sem solicitação explícita.
+As Sprints 0, 1 e 2 estão concluídas. A Sprint 2 foi publicada em `origin/main` no commit `9cca9e5`. O próximo escopo planejado é a Sprint 3: checkout e ciclo do pedido. Não antecipe módulos de sprints futuras sem solicitação explícita.
 
 ## Stack vigente
 
