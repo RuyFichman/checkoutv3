@@ -31,6 +31,20 @@ jobs:
 
   smoke:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: checkout
+          POSTGRES_PASSWORD: checkout_dev
+          POSTGRES_DB: checkoutv3
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U checkout -d checkoutv3"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -42,6 +56,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @checkout/contracts build
+      - run: pnpm --filter @checkout/db build
       - run: pnpm --filter @checkout/ui build
+      - run: pnpm db:deploy
       - run: pnpm --filter @checkout/web exec playwright install --with-deps chromium
       - run: pnpm test:e2e

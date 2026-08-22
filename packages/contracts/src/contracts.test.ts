@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { moneyInCentsSchema, productSchema } from './index';
+import { authViewerSchema, moneyInCentsSchema, productSchema, registerInputSchema } from './index';
 
 describe('core contracts', () => {
   it('accepts integer monetary values in cents', () => {
@@ -26,5 +26,45 @@ describe('core contracts', () => {
         currency: 'BRL',
       }),
     ).toMatchObject({ status: 'DRAFT', priceInCents: 19_900 });
+  });
+
+  it('normalizes registration email and rejects weak passwords', () => {
+    const valid = registerInputSchema.parse({
+      name: 'Ruy Fichman',
+      email: '  RUY@EXAMPLE.COM ',
+      password: 'checkout123',
+      workspaceName: 'Ruy Digital',
+    });
+
+    expect(valid.email).toBe('ruy@example.com');
+    expect(
+      registerInputSchema.safeParse({
+        name: 'Ruy Fichman',
+        email: 'ruy@example.com',
+        password: 'somenteletras',
+        workspaceName: 'Ruy Digital',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('exposes only the safe authenticated viewer shape', () => {
+    const result = authViewerSchema.safeParse({
+      user: {
+        id: 'user_1',
+        email: 'ruy@example.com',
+        name: 'Ruy Fichman',
+        phone: null,
+        timezone: 'America/Sao_Paulo',
+      },
+      workspace: {
+        id: 'workspace_1',
+        name: 'Ruy Digital',
+        slug: 'ruy-digital',
+      },
+      role: 'OWNER',
+      sessionExpiresAt: new Date().toISOString(),
+    });
+
+    expect(result.success).toBe(true);
   });
 });

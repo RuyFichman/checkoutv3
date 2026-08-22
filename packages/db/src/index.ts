@@ -1,9 +1,10 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 
-import { PrismaClient } from './generated/prisma/client.js';
+import { PrismaClient } from './generated/prisma/client';
 
-export * from './generated/prisma/enums.js';
-export type * from './generated/prisma/models.js';
+export { PrismaClient };
+export * from './generated/prisma/enums';
+export type * from './generated/prisma/models';
 
 export function createPrismaClient(connectionString = process.env.DATABASE_URL) {
   if (!connectionString) {

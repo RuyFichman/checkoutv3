@@ -15,9 +15,16 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: 'pnpm dev',
-    reuseExistingServer: !process.env.CI,
-    url: 'http://127.0.0.1:3000/api/health',
-  },
+  webServer: [
+    {
+      command: 'pnpm --dir ../.. --filter @checkout/api dev',
+      reuseExistingServer: !process.env.CI,
+      url: 'http://127.0.0.1:3333/v1/health',
+    },
+    {
+      command: 'pnpm dev',
+      reuseExistingServer: !process.env.CI,
+      url: 'http://127.0.0.1:3000/api/health',
+    },
+  ],
 });

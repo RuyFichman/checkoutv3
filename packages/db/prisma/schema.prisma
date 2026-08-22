@@ -1,7 +1,7 @@
 generator client {
   provider     = "prisma-client"
   output       = "../src/generated/prisma"
-  moduleFormat = "esm"
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -73,14 +73,18 @@ enum CheckoutEventType {
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  name         String
-  passwordHash String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  memberships  Membership[]
-  auditLogs    AuditLog[]   @relation("AuditActor")
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  name                String
+  phone               String?
+  timezone            String               @default("America/Sao_Paulo")
+  passwordHash        String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  memberships         Membership[]
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+  auditLogs           AuditLog[]           @relation("AuditActor")
 }
 
 model Workspace {
@@ -96,6 +100,7 @@ model Workspace {
   orders             Order[]
   gatewayCredentials GatewayCredential[]
   auditLogs          AuditLog[]
+  sessions           Session[]
 }
 
 model Membership {
@@ -109,6 +114,33 @@ model Membership {
 
   @@unique([userId, workspaceId])
   @@index([workspaceId])
+}
+
+model Session {
+  id                String    @id @default(cuid())
+  tokenHash         String    @unique
+  userId            String
+  activeWorkspaceId String
+  expiresAt         DateTime
+  lastSeenAt        DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeWorkspace   Workspace @relation(fields: [activeWorkspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([activeWorkspaceId, expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }
 
 model CheckoutTheme {

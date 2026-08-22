@@ -3,6 +3,14 @@ import { z } from 'zod';
 export const idSchema = z.string().min(1);
 export const currencySchema = z.enum(['BRL']);
 export const moneyInCentsSchema = z.number().int().nonnegative().safe();
+export const membershipRoleSchema = z.enum(['OWNER', 'ADMIN', 'MEMBER']);
+export const emailInputSchema = z.string().trim().toLowerCase().pipe(z.email());
+export const passwordSchema = z
+  .string()
+  .min(8, 'Use pelo menos 8 caracteres.')
+  .max(128, 'A senha deve ter no máximo 128 caracteres.')
+  .regex(/[A-Za-zÀ-ÿ]/, 'Inclua pelo menos uma letra.')
+  .regex(/[0-9]/, 'Inclua pelo menos um número.');
 
 export const userSchema = z.object({
   id: idSchema,
@@ -14,6 +22,47 @@ export const workspaceSchema = z.object({
   id: idSchema,
   name: z.string().trim().min(2).max(120),
   slug: z.string().trim().min(2).max(80),
+});
+
+export const registerInputSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  email: emailInputSchema,
+  password: passwordSchema,
+  workspaceName: z.string().trim().min(2).max(120),
+});
+
+export const loginInputSchema = z.object({
+  email: emailInputSchema,
+  password: z.string().min(1).max(128),
+});
+
+export const forgotPasswordInputSchema = z.object({
+  email: emailInputSchema,
+});
+
+export const resetPasswordInputSchema = z.object({
+  token: z.string().min(32).max(256),
+  password: passwordSchema,
+});
+
+export const updateProfileInputSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  phone: z.string().trim().max(30).nullable(),
+  timezone: z.string().trim().min(1).max(80),
+});
+
+export const updateWorkspaceInputSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+});
+
+export const authViewerSchema = z.object({
+  user: userSchema.extend({
+    phone: z.string().nullable(),
+    timezone: z.string(),
+  }),
+  workspace: workspaceSchema,
+  role: membershipRoleSchema,
+  sessionExpiresAt: z.iso.datetime(),
 });
 
 export const productStatusSchema = z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']);
@@ -91,3 +140,11 @@ export type PaymentStatus = z.infer<typeof paymentStatusSchema>;
 export type Product = z.infer<typeof productSchema>;
 export type User = z.infer<typeof userSchema>;
 export type Workspace = z.infer<typeof workspaceSchema>;
+export type AuthViewer = z.infer<typeof authViewerSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordInputSchema>;
+export type LoginInput = z.infer<typeof loginInputSchema>;
+export type MembershipRole = z.infer<typeof membershipRoleSchema>;
+export type RegisterInput = z.infer<typeof registerInputSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordInputSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileInputSchema>;
+export type UpdateWorkspaceInput = z.infer<typeof updateWorkspaceInputSchema>;

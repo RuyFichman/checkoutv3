@@ -76,6 +76,8 @@ Cada sprint termina com demonstração navegável, testes do caminho crítico e 
 
 ### Sprint 1 — Acesso e casca do painel
 
+**Status:** concluída em 22/08/2026.
+
 - Cadastro, login, recuperação de senha e sessão.
 - Workspace/tenant e perfil do vendedor.
 - Layout responsivo com sidebar e rotas de todos os módulos.

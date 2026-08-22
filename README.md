@@ -4,16 +4,17 @@ Fundação de uma plataforma multi-tenant de checkout e orquestração de pagame
 
 ## Estado atual
 
-A Sprint 0 entrega:
+As Sprints 0 e 1 entregam:
 
 - monorepo com painel web, API e worker;
-- contratos compartilhados de domínio;
-- interface comum para adaptadores de gateway;
-- schema inicial PostgreSQL com Prisma;
-- Redis e BullMQ para trabalho assíncrono;
-- design tokens e componentes de UI iniciais;
-- lint, tipos, testes, build e CI;
-- healthchecks para web e API.
+- cadastro, login, logout e recuperação de senha;
+- sessões opacas persistidas com cookie seguro;
+- workspaces multi-tenant, perfil do vendedor e papéis de acesso;
+- dashboard responsivo, navegação completa e estados de loading, vazio e erro;
+- métricas isoladas por workspace e modo de demonstração;
+- configurações de perfil/workspace e trilha de auditoria;
+- PostgreSQL com Prisma, Redis/BullMQ e pipeline de migrations;
+- lint, tipos, testes unitários, build, E2E e CI.
 
 Nenhum gateway real está conectado nesta fase e nenhuma transação financeira é processada.
 
@@ -36,6 +37,9 @@ pnpm dev
 Serviços locais:
 
 - web: `http://localhost:3000`
+- cadastro: `http://localhost:3000/cadastro`
+- login: `http://localhost:3000/entrar`
+- painel autenticado: `http://localhost:3000/app`
 - healthcheck web: `http://localhost:3000/api/health`
 - healthcheck API: `http://localhost:3333/v1/health`
 - PostgreSQL: `localhost:55432`
@@ -53,8 +57,11 @@ pnpm typecheck      # valida tipos TypeScript
 pnpm test           # executa testes unitários
 pnpm test:e2e       # executa o smoke test no navegador
 pnpm check          # lint + tipos + testes + build
+pnpm db:deploy      # aplica migrations pendentes sem criar uma nova migration
 pnpm infra:down     # encerra PostgreSQL e Redis
 ```
+
+Em desenvolvimento, a recuperação de senha exibe o link de redefinição na própria tela. Em produção, o mesmo token deve ser entregue pelo provedor de e-mail; ele nunca é devolvido pela API nesse ambiente.
 
 ## Estrutura
 
@@ -82,3 +89,4 @@ packages/
 - nenhum dado sensível de cartão passa pelos nossos servidores.
 
 Veja as decisões arquiteturais em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+O escopo e os aceites da entrega atual estão em [`docs/SPRINT_1.md`](docs/SPRINT_1.md).

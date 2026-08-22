@@ -20,6 +20,7 @@
     "test:e2e": "pnpm --filter @checkout/web test:e2e",
     "typecheck": "turbo typecheck",
     "db:generate": "pnpm --filter @checkout/db db:generate",
+    "db:deploy": "pnpm --filter @checkout/db db:deploy",
     "db:migrate": "pnpm --filter @checkout/db db:migrate",
     "db:studio": "pnpm --filter @checkout/db db:studio",
     "infra:down": "docker compose down",

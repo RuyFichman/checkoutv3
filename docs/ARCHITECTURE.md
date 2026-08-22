@@ -48,10 +48,20 @@ Regras de idempotência, persistência e transição de pedido ficam no domínio
 
 - tenant obtido da sessão autenticada, nunca de um campo confiado do cliente;
 - autorização aplicada no serviço e reforçada nas consultas;
+- tokens de sessão e de recuperação persistidos somente como hash SHA-256;
+- senhas derivadas com `scrypt`, salt único e comparação em tempo constante;
+- cookie de sessão `HttpOnly`, `SameSite=Lax` e `Secure` em produção;
+- redefinição de senha de uso único revoga todas as sessões do usuário;
 - segredos criptografados por envelope encryption com chave fora do banco;
 - payloads de webhook armazenados com remoção de dados desnecessários;
 - logs sem tokens, códigos PIX completos ou documentos pessoais;
 - valores em centavos e alterações financeiras dentro de transações de banco.
+
+## Identidade e isolamento multi-tenant
+
+A API é a autoridade da sessão. O painel encaminha apenas o cookie para a API por uma rota BFF restrita e não armazena tokens no navegador. Cada sessão aponta para um workspace ativo; o guard autentica a sessão, carrega a associação e fornece o `workspaceId` confiável para os serviços.
+
+Consultas operacionais são construídas com o escopo do tenant no servidor. Papéis `OWNER`, `ADMIN` e `MEMBER` controlam operações administrativas, e mudanças relevantes produzem registros append-only em `AuditLog`.
 
 ## Evolução
 
