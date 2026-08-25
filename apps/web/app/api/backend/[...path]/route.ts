@@ -6,10 +6,11 @@ const ALLOWED_PREFIXES = [
   'products/',
   'themes/',
   'orders/',
+  'gateways/',
   'public/checkout/',
   'public/checkout-sessions/',
 ];
-const ALLOWED_EXACT_PATHS = ['products', 'themes', 'orders'];
+const ALLOWED_EXACT_PATHS = ['products', 'themes', 'orders', 'gateways'];
 
 type RouteParameters = {
   params: Promise<{ path: string[] }>;

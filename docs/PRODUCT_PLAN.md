@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Construir uma plataforma própria inspirada nos fluxos observados nas 52 capturas da EzFy, sem reutilizar marca, logotipo, textos proprietários ou outros ativos da empresa. O produto será uma camada de checkout e orquestração: o vendedor conecta as próprias credenciais de um adquirente/gateway, publica produtos e acompanha todo o funil de conversão.
+Construir uma plataforma própria inspirada nos fluxos observados nas 52 capturas da EzFy, sem reutilizar marca, logotipo, textos proprietários ou outros ativos da empresa. O produto será uma camada de checkout e orquestração exclusivamente PIX: o vendedor conecta as próprias credenciais de um PSP/gateway PIX, publica produtos e acompanha todo o funil de conversão.
 
 O primeiro marco útil é o fluxo completo:
 
@@ -39,7 +39,7 @@ O primeiro marco útil é o fluxo completo:
 
 ### Conta e crescimento
 
-- Cobrança da comissão da plataforma, cartão, saldo, cupom e faturas.
+- Cobrança da comissão da plataforma via PIX, saldo, cupom e faturas.
 - Programa de indicação com comissões e saque via PIX.
 - Premiações por volume processado.
 - Suporte via WhatsApp/comunidade.
@@ -58,7 +58,7 @@ Começar como monólito modular em TypeScript, mantendo fronteiras que permitam 
 - eventos imutáveis de checkout/pedido para alimentar o funil;
 - monorepo com pacotes compartilhados de UI, banco, contratos e adaptadores.
 
-Princípios obrigatórios: multi-tenant desde o início, valores monetários em centavos, webhooks idempotentes, credenciais criptografadas, trilha de auditoria e nenhuma captura de dados de cartão nos nossos servidores.
+Princípios obrigatórios: multi-tenant desde o início, valores monetários em centavos, webhooks idempotentes, credenciais criptografadas e trilha de auditoria. O produto é exclusivamente PIX; campos, contratos, modelos, SDKs, scripts, endpoints e adapters para cartão ficam fora do escopo. Qualquer mudança dessa decisão exige revisão arquitetural e de conformidade antes da implementação.
 
 ## Sprints
 
@@ -111,6 +111,8 @@ Cada sprint termina com demonstração navegável, testes do caminho crítico e 
 **Aceite:** o fluxo público completo funciona com gateway simulado e aparece no painel de pedidos.
 
 ### Sprint 4 — Primeiro gateway real
+
+**Status:** em andamento desde 24/08/2026; Mercado Pago escolhido e implementação pronta para homologação.
 
 - Interface padronizada de adapters e cofre de credenciais.
 - Conectar um gateway escolhido para PIX.
@@ -186,7 +188,7 @@ O MVP corresponde às Sprints 0 a 5. Ele já permite vender de ponta a ponta com
 ## Decisões ainda abertas
 
 - Nome e identidade visual próprios.
-- Gateway que será integrado primeiro e acesso ao ambiente de homologação.
+- Acesso às credenciais e conclusão da homologação do Mercado Pago; Flevo permanece como candidato posterior.
 - Modelo de autenticação e provedor de e-mail/storage no ambiente final.
 - Percentual e forma de cobrança da plataforma.
 - Produto digital somente no MVP ou inclusão antecipada de produto físico.

@@ -6,6 +6,8 @@ import {
   checkoutQuantityInputSchema,
   checkoutReceiptInputSchema,
   checkoutThemeInputSchema,
+  gatewayConnectionSchema,
+  mercadoPagoGatewayInputSchema,
   moneyInCentsSchema,
   productInputSchema,
   productSchema,
@@ -15,6 +17,26 @@ import {
 } from './index';
 
 describe('core contracts', () => {
+  it('validates Mercado Pago credentials without exposing them in the connection summary', () => {
+    expect(
+      mercadoPagoGatewayInputSchema.parse({
+        accessToken: 'APP_USR-example-access-token',
+        webhookSecret: 'example-webhook-secret',
+      }),
+    ).toBeDefined();
+    expect(
+      gatewayConnectionSchema.parse({
+        provider: 'MERCADO_PAGO',
+        connected: true,
+        active: true,
+        credentialId: 'credential_a',
+        label: 'Principal',
+        webhookUrl: 'https://api.example.com/v1/webhooks/mercado-pago/credential_a',
+        updatedAt: '2026-08-24T15:00:00.000Z',
+      }),
+    ).not.toHaveProperty('accessToken');
+  });
+
   it('accepts integer monetary values in cents', () => {
     expect(moneyInCentsSchema.parse(9_990)).toBe(9_990);
   });

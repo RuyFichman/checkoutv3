@@ -55,6 +55,33 @@ export const updateWorkspaceInputSchema = z.object({
   name: z.string().trim().min(2).max(120),
 });
 
+export const gatewayProviderSchema = z.literal('MERCADO_PAGO');
+
+export const mercadoPagoGatewayInputSchema = z.object({
+  accessToken: z.string().trim().min(20).max(512),
+  webhookSecret: z.string().trim().min(16).max(512),
+});
+
+export const gatewayConnectionSchema = z.object({
+  provider: gatewayProviderSchema,
+  connected: z.boolean(),
+  active: z.boolean(),
+  credentialId: idSchema.nullable(),
+  label: z.string().nullable(),
+  webhookUrl: z.url().nullable(),
+  updatedAt: z.iso.datetime().nullable(),
+});
+
+export const gatewayWebhookEventSchema = z.object({
+  id: idSchema,
+  action: z.string(),
+  externalResourceId: z.string(),
+  attempts: z.number().int().nonnegative(),
+  status: z.enum(['PENDING', 'PROCESSED', 'FAILED']),
+  receivedAt: z.iso.datetime(),
+  processedAt: z.iso.datetime().nullable(),
+});
+
 export const authViewerSchema = z.object({
   user: userSchema.extend({
     phone: z.string().nullable(),
@@ -299,8 +326,10 @@ export const checkoutEventTypeSchema = z.enum([
 
 export const publicCheckoutPaymentSchema = z.object({
   status: paymentStatusSchema,
-  provider: z.literal('MOCK'),
+  provider: z.enum(['MOCK', 'MERCADO_PAGO']),
   pixCode: z.string().nullable(),
+  qrCodeImage: z.string().nullable(),
+  ticketUrl: z.url().nullable(),
   expiresAt: z.iso.datetime().nullable(),
   paidAt: z.iso.datetime().nullable(),
   receiptFileName: z.string().nullable(),
@@ -383,7 +412,11 @@ export type User = z.infer<typeof userSchema>;
 export type Workspace = z.infer<typeof workspaceSchema>;
 export type AuthViewer = z.infer<typeof authViewerSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordInputSchema>;
+export type GatewayConnection = z.infer<typeof gatewayConnectionSchema>;
+export type GatewayProvider = z.infer<typeof gatewayProviderSchema>;
+export type GatewayWebhookEvent = z.infer<typeof gatewayWebhookEventSchema>;
 export type LoginInput = z.infer<typeof loginInputSchema>;
+export type MercadoPagoGatewayInput = z.infer<typeof mercadoPagoGatewayInputSchema>;
 export type MembershipRole = z.infer<typeof membershipRoleSchema>;
 export type RegisterInput = z.infer<typeof registerInputSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordInputSchema>;

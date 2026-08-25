@@ -20,6 +20,8 @@ import {
 import { randomBytes, randomUUID } from 'node:crypto';
 
 import { DatabaseService } from '../../common/database/database.service';
+import { GatewayPaymentsService } from '../gateways/gateway-payments.service';
+import { GatewaysService } from '../gateways/gateways.service';
 import {
   buildMockPixCode,
   calculateCheckoutTotals,
@@ -46,9 +48,14 @@ const publicSessionSelect = {
         orderBy: { createdAt: 'desc' as const },
         take: 1,
         select: {
+          id: true,
+          externalId: true,
+          gatewayCredentialId: true,
           status: true,
           provider: true,
           pixCode: true,
+          qrCodeImage: true,
+          ticketUrl: true,
           expiresAt: true,
           paidAt: true,
           receiptFileName: true,
@@ -65,6 +72,7 @@ const sessionDetailSelect = {
   productId: true,
   product: {
     select: {
+      name: true,
       quantityEnabled: true,
       theme: { select: { settings: true } },
     },
@@ -77,6 +85,11 @@ type PublicSessionRecord = Prisma.CheckoutSessionGetPayload<{
 type SessionDetailRecord = Prisma.CheckoutSessionGetPayload<{
   select: typeof sessionDetailSelect;
 }>;
+type MercadoPagoGateway = NonNullable<Awaited<ReturnType<GatewaysService['activeAdapter']>>>;
+
+function isUniqueConstraintError(cause: unknown) {
+  return cause !== null && typeof cause === 'object' && 'code' in cause && cause.code === 'P2002';
+}
 
 function serializeSession(session: PublicSessionRecord): PublicCheckoutSession {
   const customer = session.customer
@@ -102,8 +115,10 @@ function serializeSession(session: PublicSessionRecord): PublicCheckoutSession {
           payment: payment
             ? {
                 status: payment.status,
-                provider: 'MOCK',
+                provider: payment.provider === 'MERCADO_PAGO' ? 'MERCADO_PAGO' : 'MOCK',
                 pixCode: payment.pixCode,
+                qrCodeImage: payment.qrCodeImage,
+                ticketUrl: payment.ticketUrl,
                 expiresAt: payment.expiresAt?.toISOString() ?? null,
                 paidAt: payment.paidAt?.toISOString() ?? null,
                 receiptFileName: payment.receiptFileName,
@@ -117,7 +132,11 @@ function serializeSession(session: PublicSessionRecord): PublicCheckoutSession {
 
 @Injectable()
 export class CheckoutService {
-  constructor(@Inject(DatabaseService) private readonly database: DatabaseService) {}
+  constructor(
+    @Inject(DatabaseService) private readonly database: DatabaseService,
+    @Inject(GatewaysService) private readonly gateways: GatewaysService,
+    @Inject(GatewayPaymentsService) private readonly gatewayPayments: GatewayPaymentsService,
+  ) {}
 
   async createSession(
     workspaceSlug: string,
@@ -177,9 +196,7 @@ export class CheckoutService {
         select: publicSessionSelect,
       });
     } catch (cause) {
-      const concurrentCreation =
-        cause !== null && typeof cause === 'object' && 'code' in cause && cause.code === 'P2002';
-      if (!concurrentCreation) throw cause;
+      if (!isUniqueConstraintError(cause)) throw cause;
 
       session = await this.database.client.checkoutSession.findUniqueOrThrow({
         where: {
@@ -248,11 +265,30 @@ export class CheckoutService {
     return this.getSession(session.id);
   }
 
-  async createMockPix(sessionId: string) {
+  async createPix(sessionId: string): Promise<{ session: PublicCheckoutSession }> {
     const session = await this.requireMutableSession(sessionId);
 
     if (session.order) {
-      return { session: serializeSession(session) };
+      const payment = session.order.payments[0];
+      if (!payment || payment.provider === 'MOCK') {
+        return { session: serializeSession(session) };
+      }
+      if (payment.provider !== 'MERCADO_PAGO' || !payment.gatewayCredentialId) {
+        throw new ConflictException('O pagamento não possui uma credencial de gateway válida.');
+      }
+      const gateway = await this.gateways.adapterForCredential(
+        payment.gatewayCredentialId,
+        session.workspaceId,
+      );
+      if (!gateway) {
+        throw new ConflictException('A credencial usada neste pagamento não está disponível.');
+      }
+      return this.completeMercadoPagoPix(session, {
+        gateway,
+        orderId: session.order.id,
+        paymentId: payment.id,
+        externalId: payment.externalId,
+      });
     }
 
     if (session.status !== 'IDENTIFIED' || !session.customer) {
@@ -269,6 +305,73 @@ export class CheckoutService {
 
     this.assertTransition(session.status, 'PAYMENT_PENDING');
     const customer = checkoutIdentificationInputSchema.parse(session.customer);
+    const gateway = await this.gateways.activeAdapter(session.workspaceId);
+
+    if (!gateway) {
+      return this.createMockPixCharge(session, customer);
+    }
+
+    const publicId = `C3-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString('hex').toUpperCase()}`;
+    let localPayment: { orderId: string; paymentId: string };
+    try {
+      localPayment = await this.database.client.$transaction(async (transaction) => {
+        const order = await transaction.order.create({
+          data: {
+            publicId,
+            workspaceId: session.workspaceId,
+            productId: session.productId,
+            checkoutSessionId: session.id,
+            status: 'PENDING',
+            customerEmail: customer.email,
+            customerName: customer.name,
+            customerDocument: customer.document,
+            quantity: session.quantity,
+            subtotalInCents: session.subtotalInCents,
+            totalInCents: session.totalInCents,
+            currency: session.currency,
+          },
+        });
+
+        const payment = await transaction.payment.create({
+          data: {
+            orderId: order.id,
+            gatewayCredentialId: gateway.context.credentialId,
+            provider: 'MERCADO_PAGO',
+            status: 'CREATED',
+            amountInCents: session.totalInCents,
+            currency: session.currency,
+            expiresAt: session.expiresAt,
+          },
+          select: { id: true },
+        });
+        await transaction.checkoutEvent.create({
+          data: {
+            workspaceId: session.workspaceId,
+            checkoutSessionId: session.id,
+            orderId: order.id,
+            type: 'PAYMENT_STARTED',
+            payload: { provider: 'MERCADO_PAGO' },
+          },
+        });
+        return { orderId: order.id, paymentId: payment.id };
+      });
+    } catch (cause) {
+      if (!isUniqueConstraintError(cause)) throw cause;
+      return this.createPix(session.id);
+    }
+
+    return this.completeMercadoPagoPix(session, {
+      gateway,
+      orderId: localPayment.orderId,
+      paymentId: localPayment.paymentId,
+      externalId: null,
+    });
+  }
+
+  private async createMockPixCharge(
+    session: SessionDetailRecord,
+    customer: CheckoutIdentificationInput,
+  ) {
     const publicId = `C3-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString('hex').toUpperCase()}`;
     const externalId = randomUUID();
     const pixCode = buildMockPixCode({
@@ -334,6 +437,95 @@ export class CheckoutService {
     return this.getSession(session.id);
   }
 
+  private async completeMercadoPagoPix(
+    session: SessionDetailRecord,
+    input: {
+      gateway: MercadoPagoGateway;
+      orderId: string;
+      paymentId: string;
+      externalId: string | null;
+    },
+  ) {
+    const customer = checkoutIdentificationInputSchema.parse(session.customer);
+    const charge = input.externalId
+      ? await input.gateway.adapter.getCharge(input.externalId)
+      : await input.gateway.adapter.createPixCharge({
+          amountInCents: session.totalInCents,
+          customer: {
+            email: customer.email,
+            name: customer.name,
+            ...(customer.document ? { document: customer.document } : {}),
+          },
+          expiresAt: session.expiresAt,
+          idempotencyKey: input.paymentId,
+          reference: input.paymentId,
+        });
+
+    if (
+      charge.reference !== input.paymentId ||
+      charge.amountInCents !== session.totalInCents ||
+      charge.currency !== session.currency
+    ) {
+      throw new ConflictException('A cobrança retornada não corresponde ao pagamento local.');
+    }
+
+    await this.database.client.$transaction(async (transaction) => {
+      const payment = await transaction.payment.findUniqueOrThrow({
+        where: { id: input.paymentId },
+        select: { status: true },
+      });
+      await transaction.payment.update({
+        where: { id: input.paymentId },
+        data: {
+          externalId: charge.externalId,
+          ...(payment.status === 'CREATED' || payment.status === 'PENDING'
+            ? { status: 'PENDING' as const }
+            : {}),
+          ...(charge.pixCode ? { pixCode: charge.pixCode } : {}),
+          ...(charge.qrCodeImage ? { qrCodeImage: charge.qrCodeImage } : {}),
+          ...(charge.ticketUrl ? { ticketUrl: charge.ticketUrl } : {}),
+          rawPayload: {
+            status: charge.status,
+            statusDetail: charge.statusDetail,
+            ...(charge.providerTransactionId
+              ? { providerTransactionId: charge.providerTransactionId }
+              : {}),
+            reference: input.paymentId,
+          },
+        },
+      });
+      await transaction.order.updateMany({
+        where: { id: input.orderId, status: { notIn: ['PAID', 'REFUNDED'] } },
+        data: { status: 'PIX_CREATED' },
+      });
+      await transaction.checkoutSession.updateMany({
+        where: { id: session.id, status: { not: 'PAID' } },
+        data: { status: 'PAYMENT_PENDING' },
+      });
+      const pixCreated = await transaction.checkoutEvent.findFirst({
+        where: { checkoutSessionId: session.id, type: 'PIX_CREATED' },
+        select: { id: true },
+      });
+      if (!pixCreated) {
+        await transaction.checkoutEvent.create({
+          data: {
+            workspaceId: session.workspaceId,
+            checkoutSessionId: session.id,
+            orderId: input.orderId,
+            type: 'PIX_CREATED',
+            payload: {
+              provider: 'MERCADO_PAGO',
+              expiresAt: session.expiresAt.toISOString(),
+            },
+          },
+        });
+      }
+    });
+
+    await this.gatewayPayments.applyCharge(input.gateway.context, charge);
+    return this.getSession(session.id);
+  }
+
   async markPixCopied(sessionId: string) {
     const session = await this.requireMutableSession(sessionId);
     const payment = session.order?.payments[0];
@@ -364,7 +556,7 @@ export class CheckoutService {
     const uploadedAt = new Date();
     await this.database.client.$transaction(async (transaction) => {
       await transaction.payment.updateMany({
-        where: { orderId: order.id, provider: 'MOCK' },
+        where: { id: payment.id, orderId: order.id },
         data: {
           receiptUrl: input.dataUrl,
           receiptFileName: input.fileName,
@@ -390,6 +582,9 @@ export class CheckoutService {
       throw new ConflictException('Gere o PIX antes de simular a confirmação.');
     }
     const order = session.order;
+    if (order.payments[0]?.provider !== 'MOCK') {
+      throw new ConflictException('Pagamentos reais são confirmados somente pelo gateway.');
+    }
 
     const paidAt = new Date();
 
@@ -426,12 +621,44 @@ export class CheckoutService {
   }
 
   private async requireSession(sessionId: string): Promise<SessionDetailRecord> {
-    const session = await this.database.client.checkoutSession.findUnique({
+    let session = await this.loadSession(sessionId);
+    if (!session) throw new NotFoundException('Sessão de checkout não encontrada.');
+    session = await this.refreshGatewayPayment(session);
+    return this.expireSessionIfNeeded(session);
+  }
+
+  private loadSession(sessionId: string) {
+    return this.database.client.checkoutSession.findUnique({
       where: { id: sessionId },
       select: sessionDetailSelect,
     });
-    if (!session) throw new NotFoundException('Sessão de checkout não encontrada.');
-    return this.expireSessionIfNeeded(session);
+  }
+
+  private async refreshGatewayPayment(session: SessionDetailRecord) {
+    const payment = session.order?.payments[0];
+    if (
+      payment?.provider !== 'MERCADO_PAGO' ||
+      !payment.externalId ||
+      !payment.gatewayCredentialId ||
+      payment.status === 'PAID' ||
+      payment.status === 'REFUNDED'
+    ) {
+      return session;
+    }
+
+    const gateway = await this.gateways.adapterForCredential(
+      payment.gatewayCredentialId,
+      session.workspaceId,
+    );
+    if (!gateway) return session;
+
+    try {
+      const charge = await gateway.adapter.getCharge(payment.externalId);
+      await this.gatewayPayments.applyCharge(gateway.context, charge);
+      return (await this.loadSession(session.id)) ?? session;
+    } catch {
+      return session;
+    }
   }
 
   private async resolveExpiration(session: PublicSessionRecord) {
@@ -455,6 +682,32 @@ export class CheckoutService {
       return session;
     }
 
+    const payment = session.order?.payments[0];
+    if (
+      payment?.provider === 'MERCADO_PAGO' &&
+      payment.externalId &&
+      payment.gatewayCredentialId &&
+      (payment.status === 'CREATED' || payment.status === 'PENDING')
+    ) {
+      const gateway = await this.gateways.adapterForCredential(
+        payment.gatewayCredentialId,
+        session.workspaceId,
+      );
+      if (gateway) {
+        try {
+          const charge = await gateway.adapter.cancelCharge(
+            payment.externalId,
+            `cancel-${payment.id}`,
+          );
+          await this.gatewayPayments.applyCharge(gateway.context, charge);
+          const canceled = await this.loadSession(session.id);
+          if (canceled?.status === 'PAID' || canceled?.status === 'EXPIRED') return canceled;
+        } catch {
+          // A reconciliação mantém pagamentos remotos pendentes visíveis para nova tentativa.
+        }
+      }
+    }
+
     await this.database.client.$transaction(async (transaction) => {
       const result = await transaction.checkoutSession.updateMany({
         where: { id: session.id, status: { notIn: ['PAID', 'EXPIRED'] } },
@@ -472,7 +725,11 @@ export class CheckoutService {
           data: { status: 'EXPIRED' },
         });
         await transaction.payment.updateMany({
-          where: { orderId: order.id, status: { in: ['CREATED', 'PENDING'] } },
+          where: {
+            orderId: order.id,
+            provider: 'MOCK',
+            status: { in: ['CREATED', 'PENDING'] },
+          },
           data: { status: 'EXPIRED' },
         });
       }

@@ -100,6 +100,7 @@ model Workspace {
   checkoutSessions   CheckoutSession[]
   orders             Order[]
   gatewayCredentials GatewayCredential[]
+  gatewayWebhookEvents GatewayWebhookEvent[]
   auditLogs          AuditLog[]
   sessions           Session[]
 }
@@ -251,12 +252,15 @@ model Order {
 model Payment {
   id            String        @id @default(cuid())
   orderId       String
+  gatewayCredentialId String?
   provider      String
   externalId    String?
   status        PaymentStatus @default(CREATED)
   amountInCents Int
   currency      String        @default("BRL")
   pixCode       String?
+  qrCodeImage   String?
+  ticketUrl     String?
   expiresAt     DateTime?
   paidAt        DateTime?
   receiptUrl        String?
@@ -266,9 +270,11 @@ model Payment {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   order         Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  gatewayCredential GatewayCredential? @relation(fields: [gatewayCredentialId], references: [id], onDelete: SetNull)
 
   @@unique([provider, externalId])
   @@index([orderId, status])
+  @@index([gatewayCredentialId, status])
 }
 
 model CheckoutEvent {
@@ -297,9 +303,33 @@ model GatewayCredential {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  payments             Payment[]
+  webhookEvents        GatewayWebhookEvent[]
 
   @@unique([workspaceId, provider, label])
   @@index([workspaceId, active])
+}
+
+model GatewayWebhookEvent {
+  id                   String            @id @default(cuid())
+  workspaceId          String
+  gatewayCredentialId  String
+  provider             String
+  externalEventId      String
+  externalResourceId   String
+  action               String
+  payload              Json
+  attempts             Int               @default(0)
+  lastError            String?
+  receivedAt           DateTime          @default(now())
+  processedAt          DateTime?
+  updatedAt            DateTime          @updatedAt
+  workspace            Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  gatewayCredential    GatewayCredential @relation(fields: [gatewayCredentialId], references: [id], onDelete: Restrict)
+
+  @@unique([gatewayCredentialId, externalEventId])
+  @@index([workspaceId, receivedAt])
+  @@index([provider, externalResourceId])
 }
 
 model AuditLog {

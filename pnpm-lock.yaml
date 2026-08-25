@@ -50,6 +50,9 @@ importers:
       '@checkout/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@checkout/gateways':
+        specifier: workspace:*
+        version: link:../../packages/gateways
       '@fastify/cookie':
         specifier: ^11.0.0
         version: 11.1.2
@@ -188,6 +191,9 @@ importers:
       '@checkout/contracts':
         specifier: workspace:*
         version: link:../contracts
+      zod:
+        specifier: ^4.0.0
+        version: 4.4.3
 
   packages/ui:
     devDependencies:

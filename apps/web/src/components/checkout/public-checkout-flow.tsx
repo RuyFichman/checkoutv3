@@ -178,6 +178,20 @@ export function PublicCheckoutFlow({ checkout }: { checkout: PublicCheckout }) {
       );
   }, [expiresIn, session]);
 
+  useEffect(() => {
+    const payment = session?.order?.payment;
+    if (!session || session.status !== 'PAYMENT_PENDING' || payment?.provider !== 'MERCADO_PAGO') {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void checkoutRequest(`public/checkout-sessions/${session.id}`)
+        .then(({ session: current }) => applySession(current))
+        .catch(() => undefined);
+    }, 5_000);
+    return () => window.clearInterval(timer);
+  }, [session?.id, session?.order?.payment?.provider, session?.status]);
+
   const style = {
     '--checkout-primary': theme.primaryColor,
     '--checkout-secondary': theme.settings.secondaryColor,
@@ -443,7 +457,7 @@ export function PublicCheckoutFlow({ checkout }: { checkout: PublicCheckout }) {
                 </div>
                 <div>
                   <span>Forma de pagamento</span>
-                  <strong>PIX simulado</strong>
+                  <strong>PIX</strong>
                 </div>
               </div>
               {product.quantityEnabled ? (
@@ -500,11 +514,29 @@ export function PublicCheckoutFlow({ checkout }: { checkout: PublicCheckout }) {
               <header>
                 <span>PAGAMENTO</span>
                 <h1>PIX gerado com sucesso</h1>
-                <p>Este é um ambiente simulado. Nenhuma transação financeira será processada.</p>
+                <p>
+                  {session?.order?.payment?.provider === 'MERCADO_PAGO'
+                    ? 'Pague pelo aplicativo do seu banco. A confirmação acontece automaticamente.'
+                    : 'Este é um ambiente simulado. Nenhuma transação financeira será processada.'}
+                </p>
               </header>
               <div className="checkout-pix-card">
-                <div className="checkout-pix-card__qr">
-                  <QrCode size={72} />
+                <div
+                  className={
+                    session?.order?.payment?.qrCodeImage
+                      ? 'checkout-pix-card__qr is-image'
+                      : 'checkout-pix-card__qr'
+                  }
+                >
+                  {session?.order?.payment?.qrCodeImage ? (
+                    <span
+                      role="img"
+                      aria-label="QR Code PIX"
+                      style={{ backgroundImage: `url(${session.order.payment.qrCodeImage})` }}
+                    />
+                  ) : (
+                    <QrCode size={72} />
+                  )}
                 </div>
                 <div>
                   <span>Valor do PIX</span>
@@ -520,43 +552,62 @@ export function PublicCheckoutFlow({ checkout }: { checkout: PublicCheckout }) {
                 type="button"
                 className="checkout-flow__primary"
                 onClick={() => void copyPix()}
+                disabled={!session?.order?.payment?.pixCode}
               >
-                <Clipboard size={17} /> Copiar código PIX
-              </button>
-              <label className="checkout-receipt">
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,application/pdf"
-                  onChange={(event) => void uploadReceipt(event.target.files?.[0])}
-                  disabled={submitting}
-                />
-                {session?.order?.payment?.receiptUploadedAt ? (
-                  <FileCheck2 size={23} />
+                {session?.order?.payment?.pixCode ? (
+                  <Clipboard size={17} />
                 ) : (
-                  <Upload size={23} />
+                  <LoaderCircle className="is-spinning" size={17} />
                 )}
-                <span>
-                  <strong>
-                    {session?.order?.payment?.receiptFileName ?? 'Anexar comprovante'}
-                  </strong>
-                  <small>PNG, JPEG, WebP ou PDF de até 2 MB</small>
-                </span>
-              </label>
-              <div className="checkout-mock-box">
-                <span>GATEWAY SIMULADO</span>
-                <p>
-                  Use o botão abaixo para representar a confirmação que virá por webhook na Sprint
-                  4.
-                </p>
-                <button type="button" onClick={() => void confirmPayment()} disabled={submitting}>
-                  {submitting ? (
-                    <LoaderCircle className="is-spinning" size={16} />
-                  ) : (
-                    <CheckCircle2 size={16} />
-                  )}
-                  Simular pagamento aprovado
-                </button>
-              </div>
+                {session?.order?.payment?.pixCode ? 'Copiar código PIX' : 'Preparando código PIX'}
+              </button>
+              {session?.order?.payment?.provider === 'MOCK' ? (
+                <>
+                  <label className="checkout-receipt">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,application/pdf"
+                      onChange={(event) => void uploadReceipt(event.target.files?.[0])}
+                      disabled={submitting}
+                    />
+                    {session.order.payment.receiptUploadedAt ? (
+                      <FileCheck2 size={23} />
+                    ) : (
+                      <Upload size={23} />
+                    )}
+                    <span>
+                      <strong>
+                        {session.order.payment.receiptFileName ?? 'Anexar comprovante'}
+                      </strong>
+                      <small>PNG, JPEG, WebP ou PDF de até 2 MB</small>
+                    </span>
+                  </label>
+                  <div className="checkout-mock-box">
+                    <span>GATEWAY SIMULADO</span>
+                    <p>Use o botão abaixo para representar a confirmação de desenvolvimento.</p>
+                    <button
+                      type="button"
+                      onClick={() => void confirmPayment()}
+                      disabled={submitting}
+                    >
+                      {submitting ? (
+                        <LoaderCircle className="is-spinning" size={16} />
+                      ) : (
+                        <CheckCircle2 size={16} />
+                      )}
+                      Simular pagamento aprovado
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="checkout-gateway-box" role="status">
+                  <LoaderCircle className="is-spinning" size={18} />
+                  <span>
+                    <strong>Aguardando confirmação do Mercado Pago</strong>
+                    <small>Esta página atualiza automaticamente após o pagamento.</small>
+                  </span>
+                </div>
+              )}
             </section>
           ) : (
             <section className="checkout-flow__success">
@@ -566,8 +617,8 @@ export function PublicCheckoutFlow({ checkout }: { checkout: PublicCheckout }) {
               <small>PAGAMENTO CONFIRMADO</small>
               <h1>Pedido aprovado!</h1>
               <p>
-                Enviamos a confirmação para {session?.customer?.email}. O pedido já está disponível
-                para o vendedor.
+                A confirmação foi registrada para {session?.customer?.email}. O pedido já está
+                disponível para o vendedor.
               </p>
               <div>
                 <span>Pedido</span>
@@ -629,7 +680,13 @@ export function PublicCheckoutFlow({ checkout }: { checkout: PublicCheckout }) {
             <QrCode size={19} />
             <span>
               <strong>PIX</strong>
-              <small>Gateway simulado</small>
+              <small>
+                {session?.order?.payment?.provider === 'MERCADO_PAGO'
+                  ? 'Mercado Pago'
+                  : session?.order?.payment?.provider === 'MOCK'
+                    ? 'Gateway simulado'
+                    : 'Pagamento instantâneo'}
+              </small>
             </span>
             <Check size={16} />
           </div>

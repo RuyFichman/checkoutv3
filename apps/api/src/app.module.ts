@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { CheckoutModule } from './modules/checkout/checkout.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { GatewaysModule } from './modules/gateways/gateways.module';
 import { HealthModule } from './modules/health/health.module';
 import { OrdersModule } from './modules/orders/orders.module';
 
@@ -18,6 +19,7 @@ import { OrdersModule } from './modules/orders/orders.module';
     AuthModule,
     AccountModule,
     DashboardModule,
+    GatewaysModule,
     CatalogModule,
     CheckoutModule,
     OrdersModule,

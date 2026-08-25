@@ -1,6 +1,6 @@
 # CheckoutV3
 
-Fundação de uma plataforma multi-tenant de checkout e orquestração de pagamentos. O projeto está em desenvolvimento incremental conforme o plano em [`docs/PRODUCT_PLAN.md`](docs/PRODUCT_PLAN.md).
+Fundação de uma plataforma multi-tenant de checkout e orquestração exclusivamente PIX. O projeto está em desenvolvimento incremental conforme o plano em [`docs/PRODUCT_PLAN.md`](docs/PRODUCT_PLAN.md).
 
 ## Estado atual
 
@@ -21,10 +21,13 @@ As Sprints 0, 1, 2 e 3 entregam:
 - pedido e pagamento com PIX simulado, cópia de código e comprovante;
 - eventos append-only do funil e confirmação simulada de pagamento;
 - lista mínima de pedidos isolada por workspace no painel;
+- conexão do Mercado Pago por workspace com credenciais criptografadas;
+- criação, consulta e cancelamento de cobranças PIX pela Orders API;
+- webhook assinado, replay e reconciliação de pagamentos pendentes;
 - PostgreSQL com Prisma, Redis/BullMQ e pipeline de migrations;
 - lint, tipos, testes unitários, build, E2E e CI.
 
-Nenhum gateway real está conectado nesta fase e nenhuma transação financeira é processada.
+A integração do Mercado Pago está disponível para homologação, mas nenhuma credencial é incluída no repositório. Sem uma credencial ativa no workspace, o checkout preserva o provider `MOCK` e não processa valor financeiro real.
 
 ## Requisitos
 
@@ -55,6 +58,8 @@ Serviços locais:
 - Redis: `localhost:56379`
 
 Copie `.env.example` para `.env` quando precisar recriar o ambiente. As credenciais incluídas são exclusivas para desenvolvimento local.
+
+Para conectar o Mercado Pago, gere uma chave base64 de 32 bytes em `CREDENTIALS_ENCRYPTION_KEY`, configure `API_PUBLIC_URL` com a URL HTTPS pública da API e cadastre no painel do Mercado Pago a URL exibida em `/app/gateways`. Access Token e assinatura secreta são informados pelo painel e nunca devem ser adicionados ao `.env` ou ao código-fonte.
 
 ## Comandos principais
 
@@ -95,9 +100,11 @@ packages/
 - credenciais de gateway sempre criptografadas antes da persistência;
 - eventos e alterações financeiras auditáveis;
 - webhooks idempotentes e verificáveis;
-- nenhum dado sensível de cartão passa pelos nossos servidores.
+- produto exclusivamente PIX, sem campos, contratos, SDKs ou endpoints para cartão;
+- LGPD, minimização de dados, idempotência, auditoria e segurança de webhooks permanecem obrigatórias.
 
 Veja as decisões arquiteturais em [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 O escopo e os aceites da entrega atual estão em [`docs/SPRINT_1.md`](docs/SPRINT_1.md).
 Veja também a entrega de catálogo e temas em [`docs/SPRINT_2.md`](docs/SPRINT_2.md).
 O checkout transacional e o ciclo simulado do pedido estão em [`docs/SPRINT_3.md`](docs/SPRINT_3.md).
+O primeiro gateway real e os passos de homologação estão em [`docs/SPRINT_4.md`](docs/SPRINT_4.md).

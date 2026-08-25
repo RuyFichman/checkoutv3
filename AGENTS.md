@@ -11,9 +11,13 @@ Antes de alterar comportamento ou arquitetura, leia:
 - `docs/PRODUCT_PLAN.md` para sequência das sprints;
 - `docs/SPRINT_1.md` para os fluxos já entregues;
 - `docs/SPRINT_2.md` para catálogo, temas e checkout público;
+- `docs/SPRINT_3.md` para checkout transacional simulado e pedidos;
+- `docs/SPRINT_4.md` para o primeiro gateway real e as pendências de homologação;
 - o `AGENTS.md` mais próximo do arquivo alterado, quando existir.
 
-As Sprints 0, 1, 2 e 3 estão concluídas. A Sprint 2 foi publicada em `origin/main` no commit `9cca9e5`, e a Sprint 3 foi publicada no commit `4dc6f93`. O próximo escopo planejado é a Sprint 4: primeiro gateway real. Não antecipe módulos de sprints futuras sem solicitação explícita.
+As Sprints 0, 1, 2 e 3 estão concluídas. A Sprint 2 foi publicada em `origin/main` no commit `9cca9e5`, e a Sprint 3 foi publicada no commit `4dc6f93`. A Sprint 4 está em andamento: o adapter PIX do Mercado Pago foi implementado e está pronto para homologação, mas ainda não foi validado com credenciais de teste nem publicado. A Flevo permanece como gateway posterior, aguardando retorno comercial/técnico. Não antecipe módulos de sprints futuras sem solicitação explícita.
+
+O CheckoutV3 é exclusivamente PIX. Não introduza campos, contratos, modelos, SDKs, scripts, endpoints ou adapters para cartão. Uma futura mudança dessa decisão exige revisão arquitetural e de conformidade explícita antes de qualquer implementação.
 
 ## Stack vigente
 
@@ -28,7 +32,7 @@ Não substitua essa stack ou introduza um segundo framework para resolver uma ta
 
 ## Organização do monorepo
 
-- `apps/web`: painel, autenticação e futuras páginas públicas de checkout.
+- `apps/web`: painel, autenticação e checkout público.
 - `apps/api`: autoridade de sessão, regras de negócio e endpoints HTTP.
 - `apps/worker`: filas, webhooks, e-mails e retentativas.
 - `packages/contracts`: schemas Zod e tipos compartilhados entre processos.
@@ -48,8 +52,19 @@ Contratos compartilhados pertencem a `packages/contracts`; não duplique DTOs in
 - Sessões usam tokens opacos; somente hashes ficam no banco. Cookies permanecem `HttpOnly`, `SameSite=Lax` e `Secure` em produção.
 - Senhas usam `scrypt` com salt único. Recuperação é genérica, temporária, de uso único e revoga sessões anteriores.
 - Operações administrativas respeitam os papéis `OWNER`, `ADMIN` e `MEMBER` e geram auditoria quando relevante.
-- Credenciais de gateway devem ser criptografadas antes da persistência. Dados completos de cartão nunca passam pelos nossos servidores.
+- Credenciais de gateway devem ser criptografadas antes da persistência. Nenhum dado ou fluxo de cartão pertence ao escopo do produto.
 - Webhooks e transições financeiras precisam ser idempotentes, verificáveis e auditáveis.
+
+## Estado e regras da Sprint 4
+
+- O primeiro gateway real escolhido é o Mercado Pago, usando a Orders API em `/v1/orders`; não use a Payments API legada para este fluxo.
+- A integração cria exclusivamente pagamentos `pix` do tipo `bank_transfer`, com valores convertidos de centavos inteiros para strings decimais exatas.
+- O ID local do pagamento é a `external_reference` e a chave de idempotência das operações remotas.
+- Access Token e assinatura secreta pertencem ao workspace, são informados em `/app/gateways` e ficam criptografados com AES-256-GCM. Nunca os devolva ao navegador, registre em logs ou adicione ao repositório.
+- `CREDENTIALS_ENCRYPTION_KEY` deve ser uma chave base64 de 32 bytes; `API_PUBLIC_URL` deve apontar para a API pública HTTPS com o prefixo `/v1` em homologação e produção.
+- O webhook público é individual por credencial, valida `x-signature`, `x-request-id` e `data.id`, deduplica por evento e consulta a order diretamente no Mercado Pago antes de aplicar uma transição financeira.
+- O provider `MOCK` continua disponível somente quando o workspace não possui gateway ativo. Confirmação simulada é proibida para pagamentos do Mercado Pago.
+- Não marque a Sprint 4 como concluída antes de aplicar/verificar a migration, aprovar os E2E e homologar criação, pagamento e confirmação por webhook com credenciais de teste.
 
 ## Regras para o app web
 
@@ -88,6 +103,7 @@ Não marque uma sprint ou tarefa como concluída enquanto lint, tipos, testes e 
 
 - Serviços: web `:3000`, API `:3333`, PostgreSQL `:55432` e Redis `:56379`.
 - A recuperação de senha mostra o link somente em desenvolvimento; produção deverá entregá-lo pelo provedor de e-mail.
-- Nenhum gateway real está conectado e nenhuma transação financeira real é processada.
+- O adapter do Mercado Pago está implementado, mas nenhuma credencial real está conectada e nenhuma transação financeira real foi processada.
+- Em 24/08/2026, `pnpm format:check` e `pnpm check` passaram, com 23 testes unitários e 7 builds. `pnpm test:e2e` e `prisma migrate status` ficaram bloqueados porque Docker Desktop, PostgreSQL `:55432` e Redis `:56379` não iniciaram; o Prisma retornou `P1001`/`ECONNREFUSED`.
 - O social preview oficial atual é `apps/web/public/og-checkoutv3.png`.
 - A Sprint 2 aceita PNG, JPEG ou WebP de até 1 MB como data URL persistida; migre os blobs para storage S3 compatível antes de produção.

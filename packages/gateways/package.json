@@ -23,6 +23,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@checkout/contracts": "workspace:*"
+    "@checkout/contracts": "workspace:*",
+    "zod": "^4.0.0"
   }
 }

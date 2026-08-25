@@ -49,7 +49,7 @@ export class CheckoutController {
 
   @Post('public/checkout-sessions/:sessionId/pix')
   createPix(@Param('sessionId') sessionId: string) {
-    return this.checkoutService.createMockPix(sessionId);
+    return this.checkoutService.createPix(sessionId);
   }
 
   @Post('public/checkout-sessions/:sessionId/pix/copied')

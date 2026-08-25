@@ -1,12 +1,19 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import type { CatalogProduct, CatalogTheme, OrderListItem } from '@checkout/contracts';
+import type {
+  CatalogProduct,
+  CatalogTheme,
+  GatewayConnection,
+  GatewayWebhookEvent,
+  OrderListItem,
+} from '@checkout/contracts';
 
 import { SettingsPanel, type AuditEvent } from '@/src/components/dashboard/settings-panel';
 import { ModulePlaceholder } from '@/src/components/dashboard/module-placeholder';
 import { ProductsPanel } from '@/src/components/catalog/products-panel';
 import { ThemesPanel } from '@/src/components/catalog/themes-panel';
 import { OrdersPanel } from '@/src/components/orders/orders-panel';
+import { GatewaysPanel, type GatewayConfiguration } from '@/src/components/gateways/gateways-panel';
 import { authenticatedGet, requireViewer } from '@/src/lib/api';
 import { isProductModule, productModules } from '@/src/lib/navigation';
 
@@ -56,6 +63,19 @@ export default async function ModulePage({ params }: { params: Promise<{ section
   if (section === 'pedidos') {
     const { orders } = await authenticatedGet<{ orders: OrderListItem[] }>('orders');
     return <OrdersPanel orders={orders} />;
+  }
+
+  if (section === 'gateways') {
+    const configuration = await authenticatedGet<{
+      gateway: GatewayConnection;
+      webhookEvents: GatewayWebhookEvent[];
+    }>('gateways');
+    return (
+      <GatewaysPanel
+        initialConfiguration={configuration satisfies GatewayConfiguration}
+        canManage={viewer.role === 'OWNER' || viewer.role === 'ADMIN'}
+      />
+    );
   }
 
   return <ModulePlaceholder module={productModules[section]} />;
